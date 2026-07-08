@@ -1,0 +1,7 @@
+export { Informes } from './Informes'
+export { PaginaCategoriaInformes } from './PaginaCategoriaInformes'
+export { InformesClientes } from './InformesClientes'
+export { InformesProveedores } from './InformesProveedores'
+export { InformesFacturacion } from './InformesFacturacion'
+export { InformesEmpleados } from './InformesEmpleados'
+export { InformesContador } from './InformesContador'

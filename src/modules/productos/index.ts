@@ -1,0 +1,6 @@
+export { ListadoProductos } from './ListadoProductos'
+export { AltaProducto } from './AltaProducto'
+export { ModificarProducto } from './ModificarProducto'
+export { FichaProducto } from './FichaProducto'
+export { ImportarProductos } from './ImportarProductos'
+export { ListadoCategorias } from './ListadoCategorias'

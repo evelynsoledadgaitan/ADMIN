@@ -1,0 +1,179 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Sistema de diseño de ADMIN — fuente única de verdad.
+  Concepto: "planilla de trabajo" — neutro, de alto contraste, sin adornos.
+  Los únicos acentos de color son los 4 colores semánticos de acción
+  definidos en el brief (guardar/modificar/cancelar/archivar). Todo lo demás
+  es escala de grises. Esto es intencional: el usuario abre ADMIN para
+  trabajar, no para mirar una interfaz "linda".
+*/
+
+@layer base {
+  :root {
+    --background: 240 5% 98%;        /* #F7F7F8 fondo general, gris neutro (no beige) */
+    --surface: 0 0% 100%;             /* #FFFFFF tarjetas y formularios */
+    --foreground: 220 13% 10%;        /* #16181D texto principal, casi negro */
+    --border: 220 13% 90%;             /* borde negro muy sutil (mismo matiz que el texto, muy claro) */
+    --border-strong: 220 10% 78%;      /* hover de tarjetas/campos — un paso más marcado que el borde de reposo */
+    --muted: 240 5% 94%;
+    --muted-foreground: 220 9% 46%;
+
+    --primary: 231 62% 47%;           /* #2E44C6 acento único de marca/foco (no un botón de acción) */
+    --primary-foreground: 0 0% 100%;
+
+    /* Colores semánticos de acción — NO reutilizar para otra cosa */
+    --accion-guardar: 142 71% 35%;          /* verde */
+    --accion-guardar-foreground: 0 0% 100%;
+    --accion-modificar: 42 87% 45%;         /* amarillo/ámbar */
+    --accion-modificar-foreground: 220 13% 10%;
+    --accion-cancelar: 220 9% 46%;          /* gris */
+    --accion-cancelar-foreground: 0 0% 100%;
+    --accion-archivar: 220 13% 10%;         /* negro */
+    --accion-archivar-foreground: 0 0% 100%;
+
+    /*
+      Colores semánticos de ESTADO (para Snackbar, mensajes inline, badges).
+      Namespace separado de los colores de acción a propósito: un botón
+      "Guardar" y un mensaje "Guardado con éxito" comunican lo mismo pero
+      son cosas distintas (una acción vs. el resultado de una acción) —
+      ver docs/decisiones/0009-colores-semanticos.md. éxito y advertencia
+      comparten intencionalmente el matiz de guardar/modificar; error e
+      información son colores nuevos que no existían antes de este Sprint.
+    */
+    --estado-exito: 142 71% 35%;
+    --estado-exito-foreground: 0 0% 100%;
+    --estado-advertencia: 38 92% 50%;
+    --estado-advertencia-foreground: 220 13% 10%;
+    --estado-error: 0 72% 51%;
+    --estado-error-foreground: 0 0% 100%;
+    --estado-info: 217 91% 60%;
+    --estado-info-foreground: 0 0% 100%;
+
+    /*
+      Riel de navegación (BottomNav en celular, Sidebar en escritorio) —
+      identidad visual definitiva, Etapa 1. Azul petróleo/grafito, no
+      negro puro: mantiene elegancia sin endurecer la interfaz. Ver
+      identidad-visual-admin.md sección 2.1.
+    */
+    --riel: 200 33% 17%;              /* #1C303C */
+    --riel-hover: 199 34% 23%;        /* #25404E */
+    --riel-texto: 195 12% 76%;        /* #B9C6CC */
+    --riel-texto-activo: 0 0% 100%;
+    --riel-indicador: 199 43% 62%;    /* #6FA8C9 */
+
+    /* Panel cálido de la Pantalla Principal (lavado sutil del azul de marca) */
+    --panel-calido: 229 62% 95%;      /* #EEF1FC */
+
+    --radius: 0.75rem; /* 12px — identidad visual definitiva, Etapa 2 (antes 0.5rem/8px) */
+  }
+
+  .dark {
+    --background: 222 20% 10%;
+    --surface: 222 18% 14%;
+    --foreground: 210 20% 96%;
+    --border: 217 15% 24%;
+    --border-strong: 217 12% 34%;
+    --muted: 217 15% 20%;
+    --muted-foreground: 217 10% 65%;
+
+    --primary: 231 70% 65%;
+    --primary-foreground: 222 20% 10%;
+
+    --accion-guardar: 142 60% 42%;
+    --accion-guardar-foreground: 0 0% 100%;
+    --accion-modificar: 42 80% 55%;
+    --accion-modificar-foreground: 222 20% 10%;
+    --accion-cancelar: 217 10% 60%;
+    --accion-cancelar-foreground: 222 20% 10%;
+    --accion-archivar: 210 20% 96%;
+    --accion-archivar-foreground: 222 20% 10%;
+
+    --estado-exito: 142 60% 42%;
+    --estado-exito-foreground: 0 0% 100%;
+    --estado-advertencia: 38 85% 55%;
+    --estado-advertencia-foreground: 222 20% 10%;
+    --estado-error: 0 70% 58%;
+    --estado-error-foreground: 0 0% 100%;
+    --estado-info: 217 85% 68%;
+    --estado-info-foreground: 222 20% 10%;
+
+    --riel: 200 30% 12%;
+    --riel-hover: 199 30% 18%;
+    --riel-texto: 195 12% 70%;
+    --riel-texto-activo: 0 0% 100%;
+    --riel-indicador: 199 50% 68%;
+
+    --panel-calido: 229 30% 20%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html, body, #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'tnum' 1, 'cv11' 1; /* números tabulares: importa para $ y CUIT */
+  }
+
+  /* Foco visible siempre — es una app de uso diario, no una landing */
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /*
+    Transición de pantalla — única para toda la app (ver
+    docs/decisiones/0010). Deliberadamente corta (160ms) y sutil (un
+    desplazamiento de 6px, no un slide completo): "suave y rápida", no un
+    efecto de presentación. Respeta prefers-reduced-motion.
+  */
+  @keyframes entrada-pantalla {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animar-entrada-pantalla {
+    animation: entrada-pantalla 160ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animar-entrada-pantalla {
+      animation: none;
+    }
+  }
+
+  /*
+    Feedback táctil uniforme para cualquier elemento tocable que no sea ya
+    un <Button/> o <Card interactivo/> (esos ya lo traen incluido). Un
+    único nombre para no reinventar "active:scale-95 active:opacity-80" en
+    cada componente nuevo.
+  */
+  .tocable {
+    @apply transition-transform active:scale-[0.97];
+  }
+
+  /*
+    Elevación sutil — identidad visual definitiva, Etapa 2. Un único
+    lugar para las dos únicas sombras que usa ADMIN: la de una tarjeta en
+    reposo (casi imperceptible, solo separa del fondo) y la de un botón
+    de acción principal (más marcada, para que gane protagonismo frente
+    a acciones secundarias). Nada de sombras grandes ni "flotantes" —
+    sigue siendo una app de trabajo, no una landing.
+  */
+  .sombra-tarjeta {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.06), 0 2px 5px rgb(0 0 0 / 0.08);
+  }
+
+  .sombra-boton-principal {
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.16);
+  }
+}
