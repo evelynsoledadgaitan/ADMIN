@@ -62,6 +62,15 @@ export function LibroCuentaCorriente({
               <td className="whitespace-nowrap px-2 py-2 text-muted-foreground">{formatearFecha(fila.fecha)}</td>
               <td className="px-2 py-2 text-foreground">
                 {fila.concepto}
+                {fila.badge && (
+                  <span
+                    className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                      fila.badge.tono === 'exito' ? 'bg-exito/10 text-exito' : 'bg-advertencia/10 text-advertencia'
+                    }`}
+                  >
+                    {fila.badge.texto}
+                  </span>
+                )}
                 {fila.anulado && <span className="ml-2 text-xs font-semibold text-error">ANULADO</span>}
               </td>
               <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-foreground">

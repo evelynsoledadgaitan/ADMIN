@@ -143,6 +143,31 @@ export function useCobroDeFactura(movimientoId: string | null) {
   })
 }
 
+/**
+ * Deudas de un cliente que todavía no tienen ninguna factura vinculada —
+ * para el selector del Flujo C ("Es el comprobante de una deuda ya
+ * generada"). En la práctica son las cargadas a mano con "Agregar deuda"
+ * — las que ya nacieron de una factura (Flujo A) tienen `factura_id`
+ * puesto desde el momento en que se crearon, así que quedan afuera solas,
+ * sin necesitar ningún filtro extra por origen.
+ */
+export function useDeudasSinFactura(clienteId: string) {
+  return useQuery({
+    queryKey: ['deudas_clientes', clienteId, 'sin_factura'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deudas_clientes')
+        .select('*')
+        .eq('cliente_id', clienteId)
+        .is('archived_at', null)
+        .is('factura_id', null)
+        .order('fecha', { ascending: false })
+      if (error) throw error
+      return data as Deuda[]
+    }
+  })
+}
+
 /** La deuda que generó esta factura, si la hay — para el enlace "Ver deuda" desde la Ficha de factura. */
 export function useDeudaDeFactura(facturaId: string | undefined) {
   return useQuery({
@@ -190,11 +215,38 @@ export function useDeudaDeFactura(facturaId: string | undefined) {
  * Nota de arquitectura: son inserts secuenciales, no una transacción de
  * base de datos — mismo criterio que ya usa el resto de ADMIN.
  */
+/**
+ * Registrar una factura — inserta la cabecera y las líneas, y después,
+ * según el modo elegido explícitamente en la pantalla (ver
+ * docs/sistemas/facturacion-dos-flujos-diseno.md y
+ * docs/sistemas/facturacion-tercer-flujo-diseno.md):
+ *
+ * - Flujo A (`movimientoId` y `deudaId` null): genera automáticamente la
+ *   Deuda correspondiente (origen='factura', `factura_id` para
+ *   trazabilidad).
+ * - Flujo B (`movimientoId` presente): la factura se asocia a ese cobro
+ *   ya existente — no se crea ninguna Deuda.
+ * - Flujo C (`deudaId` presente): la factura se asocia a esa deuda ya
+ *   existente — se actualiza su `factura_id`, no se crea ninguna deuda
+ *   nueva. Es el mismo estado final que el Flujo A (una deuda con
+ *   `factura_id` cargado) — la diferencia es solo el momento en que pasó.
+ *
+ * Los tres son mutuamente excluyentes — la pantalla exige elegir
+ * exactamente uno.
+ */
 export function useRegistrarFactura(clienteId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ valores, movimientoId }: { valores: FacturaFormValues; movimientoId: string | null }) => {
+    mutationFn: async ({
+      valores,
+      movimientoId,
+      deudaId
+    }: {
+      valores: FacturaFormValues
+      movimientoId: string | null
+      deudaId: string | null
+    }) => {
       const facturaId = crypto.randomUUID()
       const total = totalFactura(valores.items)
 
@@ -224,7 +276,10 @@ export function useRegistrarFactura(clienteId: string) {
       const { error: errorItems } = await supabase.from('factura_items').insert(itemsAInsertar)
       if (errorItems) throw errorItems
 
-      if (movimientoId === null) {
+      if (deudaId !== null) {
+        const { error: errorVincular } = await supabase.from('deudas_clientes').update({ factura_id: facturaId }).eq('id', deudaId)
+        if (errorVincular) throw errorVincular
+      } else if (movimientoId === null) {
         const { data: config } = await supabase.from('configuracion').select('valor').eq('clave', 'numeracion').maybeSingle()
         const prefijoFacturas = (config?.valor as { facturas?: string } | null)?.facturas ?? 'FAC-'
 
@@ -241,13 +296,16 @@ export function useRegistrarFactura(clienteId: string) {
 
       return factura as Factura
     },
-    onSuccess: (_factura, { movimientoId }) => {
+    onSuccess: (_factura, { movimientoId, deudaId }) => {
       queryClient.invalidateQueries({ queryKey: ['facturas'] })
       queryClient.invalidateQueries({ queryKey: ['deudas_clientes', clienteId] })
       queryClient.invalidateQueries({ queryKey: ['saldo_cliente', clienteId] })
       queryClient.invalidateQueries({ queryKey: ['saldos_clientes'] })
       if (movimientoId) {
         queryClient.invalidateQueries({ queryKey: ['movimientos', 'cobro', clienteId, 'sin_factura'] })
+      }
+      if (deudaId) {
+        queryClient.invalidateQueries({ queryKey: ['deudas_clientes', clienteId, 'sin_factura'] })
       }
     }
   })

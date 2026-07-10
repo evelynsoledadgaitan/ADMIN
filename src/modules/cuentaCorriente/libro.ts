@@ -22,6 +22,14 @@ export interface FilaLibroCC {
   debe: number | null
   haber: number | null
   anulado: boolean
+  /**
+   * Insignia chica opcional junto al concepto — hoy solo la usan las
+   * Deudas ("Facturada"/"Sin factura"), calculada en el momento a partir
+   * de si tienen `factura_id`, sin guardar ningún dato nuevo (decisión
+   * aprobada, ver docs/decisiones/0029-bloque3-facturacion.md, adenda del
+   * tercer flujo).
+   */
+  badge?: { texto: string; tono: 'exito' | 'advertencia' }
 }
 
 export interface FilaLibroConSaldo extends FilaLibroCC {

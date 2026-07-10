@@ -54,6 +54,23 @@ Exclusivamente experiencia de uso sobre lo ya construido — sin migraciones nue
 
 Con esto, y sin ninguna migración nueva, el módulo Facturación queda cerrado.
 
+## Tercer flujo — comprobante de una deuda ya generada
+
+Primero de 5 ítems del documento "Mejoras para implementar en ADMIN" (ver la lista completa acordada con el cliente, orden de implementación confirmado). Se suma un tercer botón en "¿Qué estás haciendo?": junto a "Genera una deuda nueva" (Flujo A) y "Es el comprobante de un cobro ya registrado" (Flujo B), ahora "Es el comprobante de una deuda ya generada" (Flujo C).
+
+**El hallazgo que simplificó todo el diseño**: no hizo falta ninguna columna nueva. El Flujo A ya deja una deuda con `factura_id` apuntando a la factura que la generó — el Flujo C es, en los hechos, el mismo estado final (una deuda con `factura_id` cargado), solo que la deuda ya existía de antes en vez de crearse en el mismo momento. `useDeudaDeFactura` (la consulta que ya mostraba "Ver la deuda" en la Ficha para el Flujo A) funciona sin cambios para el Flujo C también.
+
+**"Facturada" se deriva, no se guarda** (decisión aprobada explícita del cliente: "no quiero agregar ninguna columna ni ningún estado nuevo en la base de datos") — una deuda está facturada cuando `factura_id is not null`, calculado en el momento. El pedido de un indicador visual se resolvió sumando un campo `badge` opcional a `FilaLibroCC` (solo en el frontend, sin tocar la base) — 🟢 "Facturada" / 🟡 "Sin factura" junto al concepto de cada deuda en el libro contable de Clientes.
+
+**Precompletado de línea**: al elegir una deuda, se arma una única línea con su descripción y monto — no existe forma de "autocompletar artículos" en plural porque una deuda no tiene ítems cargados uno por uno, es un monto con una descripción. La línea queda editable.
+
+**Selector de deudas** (`SeleccionarDeudaDialog`): mismo componente y mismo criterio que `SeleccionarCobroDialog` del Flujo B — sin límite de tiempo, con buscador. Muestra solo deudas sin `factura_id` (en la práctica, las cargadas a mano — las que ya nacieron de una factura por el Flujo A quedan afuera solas, sin necesitar ningún filtro por origen).
+
+**Advertencia de importes distintos**: mismo patrón que el Flujo B — no bloquea, avisa y pide confirmar.
+
+### Migración de este ítem
+Ninguna — es el primer flujo de Facturación que no necesitó ni una sola migración, apoyado 100% en columnas que ya existían.
+
 ## Reapertura puntual — dos flujos (genera deuda / comprobante de un cobro existente)
 
 Después de dar Facturación por cerrada (Sprint 3.1), aparece un caso de uso real: cobrar primero, emitir la factura real en ARCA después, y asociarla al cobro ya existente sin generar una deuda duplicada. No es un cambio de opinión sobre el alcance — es un caso de uso encontrado usando el sistema, mismo criterio que ya se aplicó para reabrir Empleados si aparece un error real.

@@ -18,7 +18,9 @@ import { useCliente, useClientes } from '@/modules/clientes/api'
 import { useProductos } from '@/modules/productos/api'
 import { useRegistrarFactura } from './api'
 import { SeleccionarCobroDialog } from './SeleccionarCobroDialog'
+import { SeleccionarDeudaDialog } from './SeleccionarDeudaDialog'
 import type { Movimiento } from '@/modules/pagos/types'
+import type { Deuda } from '@/modules/clientes/types'
 import { hoyISO, validarFactura, hayErroresFactura } from './validaciones'
 import {
   valoresFacturaVacio,
@@ -61,9 +63,11 @@ export function NuevaFactura() {
   // Flujo A/B (ver docs/sistemas/facturacion-dos-flujos-diseno.md): sin
   // valor por defecto, a propósito — el usuario tiene que elegir, no hay
   // nada que se pueda pasar por alto sin mirar.
-  const [modo, setModo] = React.useState<'deuda' | 'cobro' | null>(null)
+  const [modo, setModo] = React.useState<'deuda' | 'cobro' | 'deuda_existente' | null>(null)
   const [cobroSeleccionado, setCobroSeleccionado] = React.useState<Movimiento | null>(null)
   const [mostrarSelectorCobro, setMostrarSelectorCobro] = React.useState(false)
+  const [deudaSeleccionada, setDeudaSeleccionada] = React.useState<Deuda | null>(null)
+  const [mostrarSelectorDeuda, setMostrarSelectorDeuda] = React.useState(false)
   const [errorModo, setErrorModo] = React.useState<string | undefined>()
 
   function actualizar<K extends keyof FacturaFormValues>(campo: K, valor: FacturaFormValues[K]) {
@@ -109,6 +113,20 @@ export function NuevaFactura() {
     setErrorModo(undefined)
   }
 
+  function manejarSeleccionDeuda(deuda: Deuda) {
+    setDeudaSeleccionada(deuda)
+    setMostrarSelectorDeuda(false)
+    setErrorModo(undefined)
+    // Precompleta una línea con la descripción y el monto de la deuda —
+    // una deuda no tiene artículos cargados uno por uno, así que esta
+    // única línea de partida es la única forma honesta de "autocompletar".
+    // Sigue siendo editable: se puede ajustar o agregar más líneas.
+    setValores((actuales) => ({
+      ...actuales,
+      items: [{ idLocal: crypto.randomUUID(), producto_id: null, descripcion: deuda.descripcion, cantidad: 1, precio_unitario: deuda.monto }]
+    }))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const valoresConCliente = { ...valores, cliente_id: clienteId }
@@ -117,11 +135,15 @@ export function NuevaFactura() {
     setMostrarErrores(true)
 
     if (modo === null) {
-      setErrorModo('Elegí una de las dos opciones.')
+      setErrorModo('Elegí una de las tres opciones.')
       return
     }
     if (modo === 'cobro' && cobroSeleccionado === null) {
       setErrorModo('Elegí el cobro al que corresponde esta factura.')
+      return
+    }
+    if (modo === 'deuda_existente' && deudaSeleccionada === null) {
+      setErrorModo('Elegí la deuda a la que corresponde esta factura.')
       return
     }
     setErrorModo(undefined)
@@ -138,8 +160,22 @@ export function NuevaFactura() {
       if (!continuar) return
     }
 
+    if (modo === 'deuda_existente' && deudaSeleccionada !== null && deudaSeleccionada.monto !== total) {
+      const continuar = await confirmar({
+        titulo: 'Los importes no coinciden',
+        mensaje: `La deuda elegida es de ${formatearMoneda(deudaSeleccionada.monto)} y esta factura suma ${formatearMoneda(total)}. Puede ser correcto (redondeos, descuentos, bonificaciones) — confirmá que lo revisaste antes de continuar.`,
+        textoConfirmar: 'Continuar de todas formas',
+        accionConfirmar: 'guardar'
+      })
+      if (!continuar) return
+    }
+
     registrar.mutate(
-      { valores: valoresConCliente, movimientoId: modo === 'cobro' ? (cobroSeleccionado as Movimiento).id : null },
+      {
+        valores: valoresConCliente,
+        movimientoId: modo === 'cobro' ? (cobroSeleccionado as Movimiento).id : null,
+        deudaId: modo === 'deuda_existente' ? (deudaSeleccionada as Deuda).id : null
+      },
       {
         onSuccess: (factura) => {
           toast.exito('Factura registrada')
@@ -199,7 +235,7 @@ export function NuevaFactura() {
 
           <div>
             <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">¿Qué estás haciendo?</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <button
                 type="button"
                 onClick={() => {
@@ -229,6 +265,21 @@ export function NuevaFactura() {
                 <span className="block font-medium text-foreground">Es el comprobante de un cobro ya registrado</span>
                 <span className="block text-xs text-muted-foreground">No genera ninguna deuda nueva</span>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setModo('deuda_existente')
+                  setErrorModo(undefined)
+                  if (!deudaSeleccionada) setMostrarSelectorDeuda(true)
+                }}
+                className={cn(
+                  'rounded-md border p-3 text-left text-sm transition-colors',
+                  modo === 'deuda_existente' ? 'border-primary bg-primary/10' : 'border-border'
+                )}
+              >
+                <span className="block font-medium text-foreground">Es el comprobante de una deuda ya generada</span>
+                <span className="block text-xs text-muted-foreground">No genera ninguna deuda nueva</span>
+              </button>
             </div>
 
             {modo === 'cobro' && (
@@ -248,6 +299,27 @@ export function NuevaFactura() {
                 ) : (
                   <button type="button" onClick={() => setMostrarSelectorCobro(true)} className="text-[13px] font-medium text-primary">
                     Elegir el cobro...
+                  </button>
+                )}
+              </div>
+            )}
+            {modo === 'deuda_existente' && (
+              <div className="mt-2">
+                {deudaSeleccionada ? (
+                  <div className="flex items-center justify-between rounded-md border border-border bg-surface p-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {formatearFecha(deudaSeleccionada.fecha)} · {formatearMoneda(deudaSeleccionada.monto)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{deudaSeleccionada.descripcion}</p>
+                    </div>
+                    <button type="button" onClick={() => setMostrarSelectorDeuda(true)} className="text-xs font-medium text-primary">
+                      Cambiar
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setMostrarSelectorDeuda(true)} className="text-[13px] font-medium text-primary">
+                    Elegir la deuda...
                   </button>
                 )}
               </div>
@@ -384,6 +456,13 @@ export function NuevaFactura() {
         abierto={mostrarSelectorCobro}
         onOpenChange={setMostrarSelectorCobro}
         onSeleccionar={manejarSeleccionCobro}
+      />
+
+      <SeleccionarDeudaDialog
+        clienteId={clienteId}
+        abierto={mostrarSelectorDeuda}
+        onOpenChange={setMostrarSelectorDeuda}
+        onSeleccionar={manejarSeleccionDeuda}
       />
     </div>
   )

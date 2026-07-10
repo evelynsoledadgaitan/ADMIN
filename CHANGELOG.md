@@ -4,6 +4,47 @@ Historial de cambios de ADMIN, un Sprint por entrada. Formato acordado a partir 
 
 ---
 
+## Facturación — tercer flujo: comprobante de una deuda ya generada
+
+Primero de 5 ítems del documento "Mejoras para implementar en ADMIN" (orden acordado: Facturación → tareas de "Siempre factura" → Informes → IVA por línea → Cheques). Ver `docs/sistemas/facturacion-tercer-flujo-diseno.md` y decisión `0029`.
+
+### ✅ Agregado
+- Tercera opción en "Nueva factura": "Es el comprobante de una deuda ya generada" — asocia la factura a una deuda existente sin crear una nueva.
+- Precompletado automático de una línea (descripción + monto de la deuda elegida) — editable.
+- Indicador visual 🟢 Facturada / 🟡 Sin factura en el libro contable de Clientes, junto a cada deuda — calculado en el momento a partir de `factura_id`, sin guardar ningún dato nuevo.
+- `SeleccionarDeudaDialog`: mismo patrón que el selector de cobros del Flujo B.
+- Advertencia (no bloqueante) si el monto de la factura no coincide con el de la deuda elegida.
+
+### 🔧 Cambios
+- `FilaLibroCC` admite un `badge` opcional — solo en el frontend, sin ninguna columna nueva en la base.
+
+### 🐞 Errores corregidos
+- Ninguno.
+
+### ⚠️ Pendiente
+- Siguiente ítem del orden acordado: tareas pendientes de facturación para clientes "Siempre factura".
+
+---
+
+## Recuperación de contraseña
+
+Ver decisión `0036`.
+
+### ✅ Agregado
+- "¿Olvidaste tu contraseña?" en Login — envía el email de recuperación (`resetPasswordForEmail`).
+- `/update-password`: pantalla nueva, pública, para elegir la contraseña nueva — detecta el evento `PASSWORD_RECOVERY` de dos formas (evento + sesión ya activa al montar) para evitar una condición de carrera real.
+
+### 🔧 Cambios
+- Ninguno a `AuthProvider`, `signInWithPassword`, permisos ni arquitectura — todo nuevo, agregado sin tocar lo existente.
+
+### 🐞 Errores corregidos
+- Ninguno — no existía ningún flujo de recuperación antes de esto.
+
+### ⚠️ Pendiente
+- **Paso manual en Supabase, fuera del código**: agregar `http://localhost:5173/update-password` y la URL real de Vercel a "Redirect URLs" en Authentication → URL Configuration. Sin esto, el enlace del email no funciona.
+
+---
+
 ## Notas — "Nueva nota" en Inicio
 
 Ver decisión `0035` (sección "Ajuste").

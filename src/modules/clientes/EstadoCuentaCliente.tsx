@@ -82,7 +82,10 @@ export function EstadoCuentaCliente() {
       concepto: `${d.descripcion} (${ETIQUETAS_ORIGEN_DEUDA[d.origen]})`,
       debe: d.monto,
       haber: null,
-      anulado: d.archived_at !== null
+      anulado: d.archived_at !== null,
+      badge: d.factura_id
+        ? ({ texto: 'Facturada', tono: 'exito' } as const)
+        : ({ texto: 'Sin factura', tono: 'advertencia' } as const)
     })),
     ...(cobros ?? []).map((m) => ({
       id: `cobro-${m.id}`,
