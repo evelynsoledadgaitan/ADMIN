@@ -90,9 +90,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [cargarUsuarioYPermisos])
 
   async function login(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
-  }
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  console.log("LOGIN DATA:", data)
+  console.log("LOGIN ERROR:", error)
+
+  if (error) throw error
+}
 
   async function logout() {
     await supabase.auth.signOut()
