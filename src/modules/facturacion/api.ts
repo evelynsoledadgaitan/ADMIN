@@ -306,7 +306,32 @@ export function useRegistrarFactura(clienteId: string) {
       }
       if (deudaId) {
         queryClient.invalidateQueries({ queryKey: ['deudas_clientes', clienteId, 'sin_factura'] })
+        queryClient.invalidateQueries({ queryKey: ['deudas_clientes', 'pendientes_facturar_siempre'] })
       }
+    }
+  })
+}
+
+/**
+ * Deudas sin factura de clientes "Siempre factura" — la "tarea
+ * pendiente de facturación" completa: no es una fila guardada en ningún
+ * lado, es este cruce, calculado en el momento (ver
+ * docs/sistemas/siempre-factura-diseno.md). Global (todos los clientes),
+ * para la tarjeta de Pendientes en Inicio y su listado.
+ */
+export function useDeudasPendientesFacturarSiempreFactura() {
+  return useQuery({
+    queryKey: ['deudas_clientes', 'pendientes_facturar_siempre'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deudas_clientes')
+        .select('*, cliente:clientes!inner(id, nombre_apellido, factura_config)')
+        .is('archived_at', null)
+        .is('factura_id', null)
+        .eq('cliente.factura_config', 'siempre')
+        .order('fecha', { ascending: false })
+      if (error) throw error
+      return data as (Deuda & { cliente: { id: string; nombre_apellido: string; factura_config: string } })[]
     }
   })
 }
@@ -396,6 +421,19 @@ export function useClientesConFacturasPendientes() {
  * afecta filas, sin error) y recién después la factura misma (decisión
  * aprobada 5.1). Así el saldo del cliente se corrige solo.
  */
+/**
+ * Anular una factura — la deuda vinculada se trata distinto según de
+ * dónde vino el vínculo (ver docs/sistemas/siempre-factura-diseno.md,
+ * punto 0):
+ *
+ * - Flujo A (`origen = 'factura'`, la deuda nació junto con la factura):
+ *   se anula también — sin la factura, esa deuda no debería haber
+ *   existido nunca.
+ * - Flujo C (cualquier otro origen, la deuda ya existía y solo se
+ *   vinculó después): no se anula — se le limpia `factura_id`, vuelve a
+ *   quedar "sin factura" y disponible para facturarse de nuevo. La deuda
+ *   en sí nunca estuvo mal, solo se invalidó su comprobante fiscal.
+ */
 export function useAnularFactura(clienteId: string) {
   const queryClient = useQueryClient()
   const { usuario } = useAuth()
@@ -404,15 +442,27 @@ export function useAnularFactura(clienteId: string) {
     mutationFn: async ({ facturaId, motivo }: { facturaId: string; motivo: string }) => {
       const ahora = new Date().toISOString()
 
-      await supabase
+      const { data: deudaVinculada } = await supabase
         .from('deudas_clientes')
-        .update({
-          archived_at: ahora,
-          anulado_por: usuario?.id,
-          motivo_anulacion: 'Anulada automáticamente: la factura que la generó fue anulada.'
-        })
+        .select('id, origen')
         .eq('factura_id', facturaId)
         .is('archived_at', null)
+        .maybeSingle()
+
+      if (deudaVinculada) {
+        if (deudaVinculada.origen === 'factura') {
+          await supabase
+            .from('deudas_clientes')
+            .update({
+              archived_at: ahora,
+              anulado_por: usuario?.id,
+              motivo_anulacion: 'Anulada automáticamente: la factura que la generó fue anulada.'
+            })
+            .eq('id', deudaVinculada.id)
+        } else {
+          await supabase.from('deudas_clientes').update({ factura_id: null }).eq('id', deudaVinculada.id)
+        }
+      }
 
       const { data, error } = await supabase
         .from('facturas')
@@ -432,6 +482,7 @@ export function useAnularFactura(clienteId: string) {
       queryClient.invalidateQueries({ queryKey: ['deudas_clientes', clienteId] })
       queryClient.invalidateQueries({ queryKey: ['saldo_cliente', clienteId] })
       queryClient.invalidateQueries({ queryKey: ['saldos_clientes'] })
+      queryClient.invalidateQueries({ queryKey: ['deudas_clientes', 'pendientes_facturar_siempre'] })
     }
   })
 }

@@ -4,7 +4,7 @@ import { formatearMoneda, formatearFecha } from '@/core/lib/format'
 import { useMediosPago } from '@/modules/pagos/api'
 import { useTodosLosPagosEmpleados } from './api'
 import { SeccionInforme } from './SeccionInforme'
-import { TablaInforme, type ColumnaInforme } from './TablaInforme'
+import { TablaSimple, type ColumnaTablaSimple } from '@/core/components/TablaSimple'
 import { BotonExportar } from './BotonExportar'
 import { FiltroPeriodo } from './FiltroPeriodo'
 import { calcularRango, fechaEnRango, type RangoFechas } from './periodo'
@@ -34,7 +34,7 @@ export function InformesEmpleados() {
     [pagos, rango]
   )
 
-  const columnas: ColumnaInforme<PagoConEmpleado>[] = [
+  const columnas: ColumnaTablaSimple<PagoConEmpleado>[] = [
     { clave: 'fecha', encabezado: 'Fecha', render: (p) => formatearFecha(p.fecha) },
     { clave: 'empleado', encabezado: 'Empleado', render: (p) => p.empleado?.nombre_apellido ?? '—' },
     { clave: 'concepto', encabezado: 'Concepto', render: (p) => p.concepto },
@@ -78,7 +78,7 @@ export function InformesEmpleados() {
             />
           </div>
         </div>
-        <TablaInforme
+        <TablaSimple
           items={pagosFiltrados}
           getKey={(p) => p.id}
           columnas={columnas}
@@ -105,7 +105,7 @@ export function InformesEmpleados() {
             nombreArchivo="empleados-adelantos"
           />
         </div>
-        <TablaInforme
+        <TablaSimple
           items={adelantosFiltrados}
           getKey={(p) => p.id}
           columnas={columnas}

@@ -4,6 +4,27 @@ Historial de cambios de ADMIN, un Sprint por entrada. Formato acordado a partir 
 
 ---
 
+## Clientes "Siempre factura" — tareas pendientes de facturación
+
+Segundo ítem del documento "Mejoras para implementar en ADMIN" (orden: Facturación → **Siempre factura** → Informes → IVA por línea → Cheques). Ver `docs/sistemas/siempre-factura-diseno.md` y decisión `0037`.
+
+### ✅ Agregado
+- **Pendientes de facturar** (`/facturacion/pendientes`): deudas sin factura de clientes "Siempre factura" — nada guardado en ninguna tabla nueva, se deriva en el momento. Vive en Facturación, no en Informes (pedido explícito: "las tareas pendientes son trabajo diario, no análisis").
+- Cuarta fuente de "Pendientes" en Inicio — con una sola pendiente, va directo a Nueva Factura con esa deuda ya elegida.
+- Indicador "Facturación pendiente: N deuda(s)" en la Ficha del cliente, solo para clientes "Siempre factura" con algo pendiente.
+- `Nueva factura` acepta `?deuda=ID` — preselecciona el Flujo C automáticamente.
+
+### 🔧 Cambios
+- `TablaInforme` (vivía en Informes) se renombra a `TablaSimple` y se muda a `core/components/` — la necesitaba también Facturación.
+
+### 🐞 Errores corregidos
+- **Anular una factura del Flujo C** anulaba también la deuda vinculada, como si fuera del Flujo A — corregido: ahora se distingue por `origen`, y el Flujo C solo desvincula (`factura_id = null`), sin anular una deuda que existía antes y de forma independiente.
+
+### ⚠️ Pendiente
+- Siguiente ítem del orden acordado: mejoras a Informes (períodos, ordenamientos, filtros, resumen).
+
+---
+
 ## Facturación — tercer flujo: comprobante de una deuda ya generada
 
 Primero de 5 ítems del documento "Mejoras para implementar en ADMIN" (orden acordado: Facturación → tareas de "Siempre factura" → Informes → IVA por línea → Cheques). Ver `docs/sistemas/facturacion-tercer-flujo-diseno.md` y decisión `0029`.

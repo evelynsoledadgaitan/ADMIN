@@ -5,6 +5,7 @@ import { AppShell } from '@/core/components/AppShell'
 import { PantallaPrincipal } from '@/pages/inicio/PantallaPrincipal'
 import { Menu } from '@/pages/menu/Menu'
 import { Login } from '@/modules/usuarios/Login'
+import { UpdatePassword } from '@/modules/usuarios/UpdatePassword'
 import { SpinnerPantallaCompleta } from '@/core/components/Spinner'
 
 /**
@@ -41,6 +42,7 @@ const ListadoCategorias = lazy(() => import('@/modules/productos').then((m) => (
 
 const ListadoFacturacion = lazy(() => import('@/modules/facturacion').then((m) => ({ default: m.ListadoFacturacion })))
 const NuevaFactura = lazy(() => import('@/modules/facturacion').then((m) => ({ default: m.NuevaFactura })))
+const PendientesFacturar = lazy(() => import('@/modules/facturacion').then((m) => ({ default: m.PendientesFacturar })))
 const FichaFactura = lazy(() => import('@/modules/facturacion').then((m) => ({ default: m.FichaFactura })))
 
 const ChequesScreen = lazy(() => import('@/modules/cheques').then((m) => ({ default: m.ChequesScreen })))
@@ -66,6 +68,7 @@ function conSuspenso(elemento: React.ReactNode) {
 
 const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
+  { path: '/update-password', element: <UpdatePassword /> },
   {
     element: <ProtectedRoute />,
     children: [
@@ -96,6 +99,7 @@ const router = createBrowserRouter([
 
           { path: '/facturacion', element: conSuspenso(<ListadoFacturacion />) },
           { path: '/facturacion/nueva', element: conSuspenso(<NuevaFactura />) },
+          { path: '/facturacion/pendientes', element: conSuspenso(<PendientesFacturar />) },
           { path: '/facturacion/:id', element: conSuspenso(<FichaFactura />) },
 
           { path: '/cheques', element: conSuspenso(<ChequesScreen />) },

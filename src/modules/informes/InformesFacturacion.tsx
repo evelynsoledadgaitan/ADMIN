@@ -6,7 +6,7 @@ import { formatearNumeroFactura } from '@/modules/facturacion/types'
 import { EstadoFacturaBadge } from '@/modules/facturacion/EstadoFacturaBadge'
 import { cardClassName } from '@/core/components/Card'
 import { SeccionInforme } from './SeccionInforme'
-import { TablaInforme, type ColumnaInforme } from './TablaInforme'
+import { TablaSimple, type ColumnaTablaSimple } from '@/core/components/TablaSimple'
 import { BotonExportar } from './BotonExportar'
 import { FiltroPeriodo } from './FiltroPeriodo'
 import { calcularRango, fechaEnRango, type RangoFechas } from './periodo'
@@ -15,7 +15,7 @@ import type { Factura } from '@/modules/facturacion/types'
 
 type FacturaConCliente = Factura & { cliente: { nombre_apellido: string } }
 
-function columnasFacturas(prefijo: string | undefined): ColumnaInforme<FacturaConCliente>[] {
+function columnasFacturas(prefijo: string | undefined): ColumnaTablaSimple<FacturaConCliente>[] {
   return [
     { clave: 'numero', encabezado: 'N°', render: (f) => f.numero_externo ?? formatearNumeroFactura(f.numero_interno, prefijo) },
     { clave: 'cliente', encabezado: 'Cliente', render: (f) => f.cliente.nombre_apellido },
@@ -80,7 +80,7 @@ export function InformesFacturacion() {
             nombreArchivo="facturas-emitidas"
           />
         </div>
-        <TablaInforme
+        <TablaSimple
           items={emitidasEnPeriodo}
           getKey={(f) => f.id}
           columnas={columnas}
@@ -107,7 +107,7 @@ export function InformesFacturacion() {
             nombreArchivo="facturas-pendientes-de-emitir"
           />
         </div>
-        <TablaInforme
+        <TablaSimple
           items={pendientesDeEmitir}
           getKey={(f) => f.id}
           columnas={columnas}

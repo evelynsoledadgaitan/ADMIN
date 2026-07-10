@@ -5,7 +5,7 @@ import { useProveedores, useSaldosProveedores } from '@/modules/proveedores/api'
 import { useMediosPago } from '@/modules/pagos/api'
 import { useTodosLosMovimientos } from './api'
 import { SeccionInforme } from './SeccionInforme'
-import { TablaInforme, type ColumnaInforme } from './TablaInforme'
+import { TablaSimple, type ColumnaTablaSimple } from '@/core/components/TablaSimple'
 import { BotonExportar } from './BotonExportar'
 import { FiltroPeriodo } from './FiltroPeriodo'
 import { calcularRango, fechaEnRango, type RangoFechas } from './periodo'
@@ -42,12 +42,12 @@ export function InformesProveedores() {
     return pagos.filter((m) => fechaEnRango(m.fecha, rango))
   }, [pagos, rango])
 
-  const columnasDeuda: ColumnaInforme<FilaProveedor>[] = [
+  const columnasDeuda: ColumnaTablaSimple<FilaProveedor>[] = [
     { clave: 'nombre', encabezado: 'Proveedor', render: (f) => f.proveedor.nombre },
     { clave: 'saldo', encabezado: 'Saldo', alineacion: 'right', render: (f) => formatearMoneda(f.saldo) }
   ]
 
-  const columnasPagos: ColumnaInforme<Movimiento & { proveedor: { nombre: string } | null }>[] = [
+  const columnasPagos: ColumnaTablaSimple<Movimiento & { proveedor: { nombre: string } | null }>[] = [
     { clave: 'fecha', encabezado: 'Fecha', render: (m) => formatearFecha(m.fecha) },
     { clave: 'proveedor', encabezado: 'Proveedor', render: (m) => m.proveedor?.nombre ?? '—' },
     {
@@ -70,7 +70,7 @@ export function InformesProveedores() {
             nombreArchivo="proveedores-deudas-pendientes"
           />
         </div>
-        <TablaInforme
+        <TablaSimple
           items={filasDeuda}
           getKey={(f) => f.proveedor.id}
           columnas={columnasDeuda}
@@ -104,7 +104,7 @@ export function InformesProveedores() {
             />
           </div>
         </div>
-        <TablaInforme
+        <TablaSimple
           items={pagosFiltrados}
           getKey={(m) => m.id}
           columnas={columnasPagos}

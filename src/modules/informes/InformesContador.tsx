@@ -5,7 +5,7 @@ import { useVencimientos } from '@/modules/contador/api'
 import { ETIQUETAS_TIPO, calcularEstadoVencimiento, type Obligacion } from '@/modules/contador/types'
 import { TipoObligacionIcono } from '@/modules/contador/TipoObligacionIcono'
 import { SeccionInforme } from './SeccionInforme'
-import { TablaInforme, type ColumnaInforme } from './TablaInforme'
+import { TablaSimple, type ColumnaTablaSimple } from '@/core/components/TablaSimple'
 import { BotonExportar } from './BotonExportar'
 import { FiltroPeriodo } from './FiltroPeriodo'
 import { calcularRango, fechaEnRango, type RangoFechas } from './periodo'
@@ -16,7 +16,7 @@ const hoyISO = () => {
   return new Date(hoy.getTime() - offset * 60_000).toISOString().slice(0, 10)
 }
 
-const COLUMNAS: ColumnaInforme<Obligacion>[] = [
+const COLUMNAS: ColumnaTablaSimple<Obligacion>[] = [
   {
     clave: 'concepto',
     encabezado: 'Concepto',
@@ -91,7 +91,7 @@ export function InformesContador() {
             nombreArchivo="contador-vencidas"
           />
         </div>
-        <TablaInforme
+        <TablaSimple
           items={vencidas}
           getKey={(o) => o.id}
           columnas={COLUMNAS}
@@ -116,7 +116,7 @@ export function InformesContador() {
             nombreArchivo="contador-pendientes"
           />
         </div>
-        <TablaInforme
+        <TablaSimple
           items={pendientes}
           getKey={(o) => o.id}
           columnas={COLUMNAS}
@@ -145,7 +145,7 @@ export function InformesContador() {
             />
           </div>
         </div>
-        <TablaInforme
+        <TablaSimple
           items={proximosEnPeriodo}
           getKey={(o) => o.id}
           columnas={COLUMNAS}

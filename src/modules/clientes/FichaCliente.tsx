@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { RotateCcw } from 'lucide-react'
 import { usePageTitle } from '@/core/hooks/usePageTitle'
 import { useToast } from '@/core/hooks/useToast'
@@ -13,7 +13,7 @@ import { Button } from '@/core/components/Button'
 import { CampoSoloLectura } from '@/core/components/CampoSoloLectura'
 import { formatearMoneda } from '@/core/lib/format'
 import { useSaldoCliente } from '@/modules/cuentaCorriente'
-import { useCliente, useCondicionesIva } from './api'
+import { useCliente, useCondicionesIva, useDeudasCliente } from './api'
 
 const ETIQUETAS_FACTURA = {
   siempre: 'Siempre factura',
@@ -36,6 +36,7 @@ export function FichaCliente() {
   const { data: cliente, isLoading, isError } = useCliente(id)
   const { data: condicionesIva } = useCondicionesIva()
   const { data: saldo } = useSaldoCliente(id ?? '')
+  const { data: deudas } = useDeudasCliente(id ?? '')
   const archivar = useArchivable('clientes')
   const restaurar = useRestaurar('clientes')
 
@@ -54,6 +55,7 @@ export function FichaCliente() {
   const nombreCondicionIva = condicionesIva?.find((c) => c.id === cliente.condicion_iva_id)?.nombre
   const clienteId = cliente.id
   const archivado = cliente.archived_at !== null
+  const deudasPendientesFacturar = (deudas ?? []).filter((d) => d.archived_at === null && d.factura_id === null)
 
   async function handleArchivar() {
     const confirmado = await confirmar({
@@ -104,6 +106,17 @@ export function FichaCliente() {
       {!archivado && (
         <Card>
           <CampoSoloLectura label="Saldo" valor={saldo !== undefined ? formatearMoneda(saldo) : undefined} />
+        </Card>
+      )}
+
+      {!archivado && cliente.factura_config === 'siempre' && deudasPendientesFacturar.length > 0 && (
+        <Card className="border-advertencia/40 bg-advertencia/5">
+          <p className="text-sm text-foreground">
+            Facturación pendiente: {deudasPendientesFacturar.length} deuda{deudasPendientesFacturar.length === 1 ? '' : 's'}
+          </p>
+          <Link to={`/clientes/${cliente.id}/cuenta`} className="text-xs font-medium text-primary">
+            Ver en el Estado de Cuenta
+          </Link>
         </Card>
       )}
 

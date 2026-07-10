@@ -21,6 +21,7 @@ import { SeleccionarCobroDialog } from './SeleccionarCobroDialog'
 import { SeleccionarDeudaDialog } from './SeleccionarDeudaDialog'
 import type { Movimiento } from '@/modules/pagos/types'
 import type { Deuda } from '@/modules/clientes/types'
+import { useDeuda } from '@/modules/clientes/api'
 import { hoyISO, validarFactura, hayErroresFactura } from './validaciones'
 import {
   valoresFacturaVacio,
@@ -48,6 +49,8 @@ export function NuevaFactura() {
   const confirmar = useConfirm()
   const [searchParams] = useSearchParams()
   const clienteIdInicial = searchParams.get('cliente') ?? ''
+  const deudaIdInicial = searchParams.get('deuda')
+  const { data: deudaDesdeUrl } = useDeuda(deudaIdInicial ?? undefined)
 
   const [clienteId, setClienteId] = React.useState(clienteIdInicial)
   const [mostrarSelectorCliente, setMostrarSelectorCliente] = React.useState(!clienteIdInicial)
@@ -106,6 +109,16 @@ export function NuevaFactura() {
     actualizar('cliente_id', item.id)
     setMostrarSelectorCliente(false)
   }
+
+  // Si se llega desde "Pendientes de facturar" (?deuda=ID) — preselecciona
+  // el Flujo C solo, sin que el usuario tenga que volver a elegir nada.
+  React.useEffect(() => {
+    if (deudaDesdeUrl && modo === null) {
+      setModo('deuda_existente')
+      manejarSeleccionDeuda(deudaDesdeUrl)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe correr cuando llega la deuda pedida por URL
+  }, [deudaDesdeUrl])
 
   function manejarSeleccionCobro(cobro: Movimiento) {
     setCobroSeleccionado(cobro)

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, PlusCircle, PackagePlus, HandCoins, Banknote, Receipt, Calculator, StickyNote } from 'lucide-react'
+import { CheckCircle2, PlusCircle, PackagePlus, HandCoins, Banknote, Receipt, Calculator, StickyNote, FileClock } from 'lucide-react'
 import { useAuth } from '@/app/providers/AuthProvider'
 import { moduloPorKey } from '@/core/theme/modulos'
 import { cardClassName } from '@/core/components/Card'
@@ -16,6 +16,7 @@ import { useCantidadFacturasPendientes } from '@/modules/facturacion/api'
 import { useCantidadVencimientosPendientes } from '@/modules/contador/api'
 import { useRecordatoriosPendientes } from '@/modules/notas/api'
 import { NotaDialog } from '@/modules/notas/NotaDialog'
+import { useDeudasPendientesFacturarSiempreFactura } from '@/modules/facturacion/api'
 
 const formateadorFecha = new Intl.DateTimeFormat('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
 
@@ -72,6 +73,8 @@ export function PantallaPrincipal() {
   const { data: cantidadVencimientosPendientes } = useCantidadVencimientosPendientes()
   const { data: recordatoriosPendientes } = useRecordatoriosPendientes()
   const cantidadRecordatorios = recordatoriosPendientes?.length ?? 0
+  const { data: deudasPendientesFacturar } = useDeudasPendientesFacturarSiempreFactura()
+  const cantidadPendientesFacturar = deudasPendientesFacturar?.length ?? 0
 
   const pendientes = [
     (cantidadFacturasPendientes ?? 0) > 0 && {
@@ -102,6 +105,22 @@ export function PantallaPrincipal() {
       // Con una sola nota pendiente, abre esa nota directo. Con más de una,
       // no hay una "correspondiente" única — lleva al listado general.
       ruta: cantidadRecordatorios === 1 ? `/notas?abrir=${recordatoriosPendientes![0].id}` : '/notas'
+    },
+    cantidadPendientesFacturar > 0 && {
+      key: 'pendientes_facturar',
+      icono: FileClock,
+      color: 'text-rose-600',
+      fondo: 'bg-rose-50',
+      borde: 'border-rose-500',
+      texto: `${cantidadPendientesFacturar} deuda${cantidadPendientesFacturar === 1 ? '' : 's'} pendiente${cantidadPendientesFacturar === 1 ? '' : 's'} de facturar`,
+      // "Siempre factura": con una sola pendiente, va directo a Nueva
+      // Factura con esa deuda ya elegida (Flujo C). Con más de una, al
+      // listado — vive en Facturación, no en Informes, a propósito: es
+      // trabajo del día, no análisis (decisión aprobada explícita).
+      ruta:
+        cantidadPendientesFacturar === 1
+          ? `/facturacion/nueva?cliente=${deudasPendientesFacturar![0].cliente.id}&deuda=${deudasPendientesFacturar![0].id}`
+          : '/facturacion/pendientes'
     }
   ].filter((p): p is Exclude<typeof p, false> => p !== false)
 

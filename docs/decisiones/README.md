@@ -37,3 +37,5 @@ Cada archivo de esta carpeta documenta **una** decisión de arquitectura: qué s
 33. [0033 — Configuración](./0033-configuracion.md)
 34. [0034 — Revisión integral v1.0: Etapa 1 (limpieza interna)](./0034-revision-v1-etapa1-limpieza.md)
 35. [0035 — Notas (cierre del roadmap funcional de ADMIN v1.0)](./0035-notas.md)
+36. [0036 — Recuperación de contraseña](./0036-recuperacion-password.md)
+37. [0037 — Clientes "Siempre factura": tareas pendientes de facturación](./0037-siempre-factura.md)

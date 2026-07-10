@@ -4,7 +4,7 @@ import { formatearMoneda } from '@/core/lib/format'
 import { useClientes } from '@/modules/clientes/api'
 import { useSaldosClientes } from '@/modules/cuentaCorriente'
 import { SeccionInforme } from './SeccionInforme'
-import { TablaInforme, type ColumnaInforme } from './TablaInforme'
+import { TablaSimple, type ColumnaTablaSimple } from '@/core/components/TablaSimple'
 import { BotonExportar } from './BotonExportar'
 import type { Cliente } from '@/modules/clientes/types'
 
@@ -35,7 +35,7 @@ export function InformesClientes() {
   const conDeuda = filas.filter((f) => f.saldo > 0).sort((a, b) => b.saldo - a.saldo)
   const conSaldoAFavor = filas.filter((f) => f.saldo < 0).sort((a, b) => a.saldo - b.saldo)
 
-  const columnas: ColumnaInforme<FilaCliente>[] = [
+  const columnas: ColumnaTablaSimple<FilaCliente>[] = [
     { clave: 'nombre', encabezado: 'Cliente', render: (f) => f.cliente.nombre_apellido },
     { clave: 'saldo', encabezado: 'Saldo', alineacion: 'right', render: (f) => formatearMoneda(Math.abs(f.saldo)) }
   ]
@@ -56,7 +56,7 @@ export function InformesClientes() {
             nombreArchivo="clientes-saldos-pendientes"
           />
         </div>
-        <TablaInforme
+        <TablaSimple
           items={conDeuda}
           getKey={(f) => f.cliente.id}
           columnas={columnas}
@@ -76,7 +76,7 @@ export function InformesClientes() {
             nombreArchivo="clientes-saldo-a-favor"
           />
         </div>
-        <TablaInforme
+        <TablaSimple
           items={conSaldoAFavor}
           getKey={(f) => f.cliente.id}
           columnas={columnas}
@@ -96,7 +96,7 @@ export function InformesClientes() {
             nombreArchivo="clientes-mayor-deuda"
           />
         </div>
-        <TablaInforme
+        <TablaSimple
           items={conDeuda}
           getKey={(f) => f.cliente.id}
           columnas={columnas}

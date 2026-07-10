@@ -134,6 +134,19 @@ export function useDeudasCliente(clienteId: string) {
   })
 }
 
+/** Una deuda puntual, por id — para preseleccionarla en Nueva Factura cuando se llega desde Pendientes de facturar (?deuda=ID). */
+export function useDeuda(id: string | undefined) {
+  return useQuery({
+    queryKey: ['deudas_clientes', 'una', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('deudas_clientes').select('*').eq('id', id as string).single()
+      if (error) throw error
+      return data as Deuda
+    }
+  })
+}
+
 export function useRegistrarDeuda(clienteId: string) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -161,6 +174,7 @@ export function useRegistrarDeuda(clienteId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deudas_clientes', clienteId] })
       queryClient.invalidateQueries({ queryKey: ['saldo_cliente', clienteId] })
+      queryClient.invalidateQueries({ queryKey: ['deudas_clientes', 'pendientes_facturar_siempre'] })
     }
   })
 }
@@ -187,6 +201,7 @@ export function useAnularDeuda(clienteId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deudas_clientes', clienteId] })
       queryClient.invalidateQueries({ queryKey: ['saldo_cliente', clienteId] })
+      queryClient.invalidateQueries({ queryKey: ['deudas_clientes', 'pendientes_facturar_siempre'] })
     }
   })
 }
