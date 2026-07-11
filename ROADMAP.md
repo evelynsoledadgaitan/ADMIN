@@ -29,6 +29,18 @@ Estado general del proyecto, Sprint por Sprint. Se actualiza al cerrar cada Spri
 
 ✅ Cerrado y aprobado — **roadmap funcional de ADMIN v1.0 completo**.
 
+## Mejoras post-v1.0 (documento "Mejoras para implementar en ADMIN")
+
+| Ítem | Estado |
+|---|---|
+| 1. Facturación — tercer flujo (comprobante de una deuda ya generada) | ✅ |
+| 2. Clientes "Siempre factura" — tareas pendientes de facturación | ✅ |
+| 3. Informes — períodos, ordenamiento, filtros, resumen | ✅ |
+| 4. Facturación — IVA por línea de artículo | ✅ |
+| 5. Módulo Cheques (completo) | ✅ |
+
+✅ **Los 5 ítems completos.**
+
 ## Próximo objetivo
 
-Etapas 2 y 3 de la revisión integral (consistencia/UX y rendimiento), y después la puesta en producción — ver `docs/sistemas/puesta-en-produccion-plan.md`. El alta de usuarios con PIN queda pospuesta para el final, a pedido explícito. Ver `docs/sistemas/roadmap-bloques-funcionales.md` y decisión `0025` para el alcance definitivo del proyecto.
+Etapas 2 y 3 de la revisión integral (consistencia/UX y rendimiento, pospuestas cuando llegó el documento de mejoras), y después la puesta en producción — ver `docs/sistemas/puesta-en-produccion-plan.md`. El alta de usuarios con PIN queda pospuesta para el final, a pedido explícito. Ver `docs/sistemas/roadmap-bloques-funcionales.md` y decisión `0025` para el alcance definitivo del proyecto.

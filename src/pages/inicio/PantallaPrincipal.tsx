@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, PlusCircle, PackagePlus, HandCoins, Banknote, Receipt, Calculator, StickyNote, FileClock } from 'lucide-react'
+import { CheckCircle2, PlusCircle, PackagePlus, HandCoins, Banknote, Receipt, Calculator, StickyNote, FileClock, Landmark } from 'lucide-react'
 import { useAuth } from '@/app/providers/AuthProvider'
 import { moduloPorKey } from '@/core/theme/modulos'
 import { cardClassName } from '@/core/components/Card'
@@ -17,6 +17,7 @@ import { useCantidadVencimientosPendientes } from '@/modules/contador/api'
 import { useRecordatoriosPendientes } from '@/modules/notas/api'
 import { NotaDialog } from '@/modules/notas/NotaDialog'
 import { useDeudasPendientesFacturarSiempreFactura } from '@/modules/facturacion/api'
+import { useChequesPendientesVencer } from '@/modules/cheques/api'
 
 const formateadorFecha = new Intl.DateTimeFormat('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
 
@@ -75,6 +76,8 @@ export function PantallaPrincipal() {
   const cantidadRecordatorios = recordatoriosPendientes?.length ?? 0
   const { data: deudasPendientesFacturar } = useDeudasPendientesFacturarSiempreFactura()
   const cantidadPendientesFacturar = deudasPendientesFacturar?.length ?? 0
+  const { data: chequesPendientes } = useChequesPendientesVencer()
+  const cantidadChequesPendientes = chequesPendientes?.length ?? 0
 
   const pendientes = [
     (cantidadFacturasPendientes ?? 0) > 0 && {
@@ -121,6 +124,17 @@ export function PantallaPrincipal() {
         cantidadPendientesFacturar === 1
           ? `/facturacion/nueva?cliente=${deudasPendientesFacturar![0].cliente.id}&deuda=${deudasPendientesFacturar![0].id}`
           : '/facturacion/pendientes'
+    },
+    cantidadChequesPendientes > 0 && {
+      key: 'cheques',
+      icono: Landmark,
+      color: 'text-sky-700',
+      fondo: 'bg-sky-50',
+      borde: 'border-sky-600',
+      texto: `${cantidadChequesPendientes} cheque${cantidadChequesPendientes === 1 ? '' : 's'} próximo${cantidadChequesPendientes === 1 ? '' : 's'} a vencer`,
+      // Con uno solo, va directo a ese cheque. Con más de uno, al listado
+      // (ya filtrado en "Disponibles", donde viven los que faltan resolver).
+      ruta: cantidadChequesPendientes === 1 ? `/cheques/${chequesPendientes![0].id}` : '/cheques'
     }
   ].filter((p): p is Exclude<typeof p, false> => p !== false)
 

@@ -2,12 +2,11 @@
 
 Ver `docs/decisiones/0025-alcance-definitivo-del-proyecto.md` para el alcance que enmarca todo este roadmap (sin Caja, sin Stock, Facturación interna sin ARCA/AFIP).
 
-Auditoría del estado real, actualizada tras cerrar Notas — **roadmap funcional de ADMIN v1.0 completo**:
+Auditoría del estado real, actualizada tras cerrar Cheques — **roadmap funcional de ADMIN v1.0 completo, más los 5 ítems del documento de mejoras**:
 
 | Estado | Piezas |
 |---|---|
-| ✅ Completo | Autenticación/permisos (motor), Identidad visual, Motor de Pagos, Cuenta Corriente compartida, Clientes, Proveedores, Productos, Facturación, Empleados, Contador, Informes, Configuración, Notas |
-| ⬜ Fuera del roadmap actual | Cheques (esqueleto, sin fecha) |
+| ✅ Completo | Autenticación/permisos (motor), Identidad visual, Motor de Pagos, Cuenta Corriente compartida, Clientes, Proveedores, Productos, Facturación, Empleados, Contador, Informes, Configuración, Notas, Cheques |
 
 ## Bloque 1 — Cerrar Clientes y Proveedores
 Validación real de CUIT (dígito verificador, no solo longitud) y comprobante adjunto (Supabase Storage) para deudas/compras/movimientos — los 2 pendientes que arrastran ambos módulos desde varios Sprints atrás.

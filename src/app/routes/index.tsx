@@ -45,7 +45,9 @@ const NuevaFactura = lazy(() => import('@/modules/facturacion').then((m) => ({ d
 const PendientesFacturar = lazy(() => import('@/modules/facturacion').then((m) => ({ default: m.PendientesFacturar })))
 const FichaFactura = lazy(() => import('@/modules/facturacion').then((m) => ({ default: m.FichaFactura })))
 
-const ChequesScreen = lazy(() => import('@/modules/cheques').then((m) => ({ default: m.ChequesScreen })))
+const ListadoCheques = lazy(() => import('@/modules/cheques').then((m) => ({ default: m.ListadoCheques })))
+const AltaCheque = lazy(() => import('@/modules/cheques').then((m) => ({ default: m.AltaCheque })))
+const FichaCheque = lazy(() => import('@/modules/cheques').then((m) => ({ default: m.FichaCheque })))
 const ListadoEmpleados = lazy(() => import('@/modules/empleados').then((m) => ({ default: m.ListadoEmpleados })))
 const AltaEmpleado = lazy(() => import('@/modules/empleados').then((m) => ({ default: m.AltaEmpleado })))
 const ModificarEmpleado = lazy(() => import('@/modules/empleados').then((m) => ({ default: m.ModificarEmpleado })))
@@ -102,7 +104,9 @@ const router = createBrowserRouter([
           { path: '/facturacion/pendientes', element: conSuspenso(<PendientesFacturar />) },
           { path: '/facturacion/:id', element: conSuspenso(<FichaFactura />) },
 
-          { path: '/cheques', element: conSuspenso(<ChequesScreen />) },
+          { path: '/cheques', element: conSuspenso(<ListadoCheques />) },
+          { path: '/cheques/nuevo', element: conSuspenso(<AltaCheque />) },
+          { path: '/cheques/:id', element: conSuspenso(<FichaCheque />) },
           { path: '/empleados', element: conSuspenso(<ListadoEmpleados />) },
           { path: '/empleados/nuevo', element: conSuspenso(<AltaEmpleado />) },
           { path: '/empleados/:id', element: conSuspenso(<FichaEmpleado />) },

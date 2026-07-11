@@ -4,6 +4,29 @@ Historial de cambios de ADMIN, un Sprint por entrada. Formato acordado a partir 
 
 ---
 
+## Módulo Cheques (completo)
+
+Quinto y último ítem del documento "Mejoras para implementar en ADMIN" — se completan los 5. Ver `docs/sistemas/cheques-diseno.md` y decisión `0040`.
+
+### ✅ Agregado
+- **Cheques**: alta (genera un cobro automático al cliente), listado con 7 pestañas por estado (Disponibles/Entregados/Depositados/Acreditados/Rechazados/Anulados/Todos), Ficha con acciones según el estado.
+- **Depositar** (sin generar ningún movimiento nuevo — el ingreso ya se registró al recibirlo), **Marcar acreditado**, **Marcar rechazado** (anula el cobro o el pago vinculado, según de qué estado venía), **Entregar a un proveedor** (genera un pago automático), **Anular**.
+- **Trazabilidad**: la Ficha muestra a qué proveedor se entregó un cheque y un enlace directo a su Estado de Cuenta.
+- **Actividad**: historial automático de cada cambio de estado, reutilizando `HistorialAuditoria` — sin ninguna tabla nueva para esto.
+- Quinta fuente de "Pendientes" en Inicio: cheques disponibles próximos a vencer (7 días).
+
+### 🔧 Cambios
+- `HistorialAuditoria` acepta `cheques`.
+- El medio de pago "Cheque" (catálogo desde la Fase 0, sin usar hasta ahora) queda conectado por primera vez.
+
+### 🐞 Errores corregidos
+- Ninguno.
+
+### ⚠️ Pendiente
+- Con los 5 ítems del documento de mejoras completos, quedan las Etapas 2 y 3 de la revisión integral (consistencia/UX, rendimiento) y, al final de todo, el alta de usuarios con PIN.
+
+---
+
 ## Facturación — IVA por línea de artículo
 
 Cuarto ítem del documento "Mejoras para implementar en ADMIN" (orden: Facturación → Siempre factura → Informes → **IVA por línea** → Cheques) — el de mayor riesgo arquitectónico de los 5. Ver `docs/sistemas/iva-por-linea-diseno.md` y decisión `0039`.

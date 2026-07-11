@@ -391,6 +391,64 @@ export interface Database {
           }
         ]
       }
+      cheques: {
+        Row: {
+          id: string
+          banco: string
+          numero: string
+          importe: number
+          titular: string
+          cuit: string | null
+          fecha_emision: string
+          fecha_vencimiento: string
+          estado: 'disponible' | 'entregado' | 'depositado' | 'acreditado' | 'rechazado' | 'anulado'
+          observaciones: string | null
+          comprobante_path: string | null
+          cliente_id: string
+          proveedor_id: string | null
+          movimiento_cobro_id: string
+          movimiento_pago_id: string | null
+          created_at: Timestamp
+          updated_at: Timestamp
+        }
+        Insert: Partial<Database['public']['Tables']['cheques']['Row']> & {
+          banco: string
+          numero: string
+          importe: number
+          titular: string
+          fecha_emision: string
+          fecha_vencimiento: string
+          cliente_id: string
+          movimiento_cobro_id: string
+        }
+        Update: Partial<Database['public']['Tables']['cheques']['Row']>
+        Relationships: [
+          {
+            foreignKeyName: 'cheques_cliente_id_fkey'
+            columns: ['cliente_id']
+            referencedRelation: 'clientes'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'cheques_proveedor_id_fkey'
+            columns: ['proveedor_id']
+            referencedRelation: 'proveedores'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'cheques_movimiento_cobro_id_fkey'
+            columns: ['movimiento_cobro_id']
+            referencedRelation: 'movimientos'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'cheques_movimiento_pago_id_fkey'
+            columns: ['movimiento_pago_id']
+            referencedRelation: 'movimientos'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       medios_pago: {
         Row: { id: string; nombre: string; orden: number; archived_at: Timestamp | null; created_at: Timestamp; updated_at: Timestamp }
         Insert: Partial<Database['public']['Tables']['medios_pago']['Row']> & { nombre: string }

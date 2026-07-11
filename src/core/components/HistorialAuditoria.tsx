@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase/client'
 import { Skeleton } from './Skeleton'
 import { EmptyState } from './EmptyState'
 
-type TablaAuditable = 'clientes' | 'proveedores' | 'productos' | 'empleados' | 'obligaciones_contador'
+type TablaAuditable = 'clientes' | 'proveedores' | 'productos' | 'empleados' | 'obligaciones_contador' | 'cheques'
 
 const ICONOS = { insert: FilePlus2, update: Pencil, archive: Archive } as const
 const ETIQUETAS = { insert: 'Creado', update: 'Modificado', archive: 'Archivado' } as const
