@@ -4,6 +4,15 @@ Historial de cambios de ADMIN, un Sprint por entrada. Formato acordado a partir 
 
 ---
 
+## Cheques — corrección del selector de Cliente
+
+Ver decisión `0040` (sección "Corrección").
+
+### 🐞 Errores corregidos
+- "Nuevo cheque" usaba un desplegable simple para elegir el cliente, incómodo de recorrer en el celular con una lista larga y sin poder escribir para filtrar. Reemplazado por el mismo buscador (`SelectorEntidadDialog`) que ya usa el resto de la app — incluida la propia Ficha del cheque al elegir un proveedor.
+
+---
+
 ## Módulo Cheques (completo)
 
 Quinto y último ítem del documento "Mejoras para implementar en ADMIN" — se completan los 5. Ver `docs/sistemas/cheques-diseno.md` y decisión `0040`.

@@ -36,6 +36,12 @@ Aplica el documento de diseño ya aprobado, con las 4 confirmaciones y los 2 com
 - **Cheques como cuenta corriente independiente**: descartada explícitamente por el cliente — hubiera duplicado la lógica de saldos ya construida y probada en Clientes/Proveedores.
 - **3 tramos de aviso de vencimiento** (7/3/día): descartados a favor de un solo umbral — sin infraestructura de notificaciones, los 3 tramos no aportarían nada que la tarjeta única no muestre ya.
 
+## Corrección — selector de Cliente en Nuevo cheque
+
+Encontrada en el uso real: "Nuevo cheque" usaba un `<Select>` simple para elegir el cliente, en vez de `SelectorEntidadDialog` (el buscador con lista, ya usado en todo el resto de la app — incluida la propia Ficha del cheque, al elegir un proveedor). Con una lista larga de clientes, el desplegable simple se hacía incómodo de recorrer en el celular, sin forma de escribir para filtrar.
+
+Corregido para usar el mismo componente que ya usa el resto del sistema — mismo criterio en las dos direcciones (Nuevo cheque para elegir cliente, Ficha del cheque para elegir proveedor).
+
 ## Estado del roadmap
 
 Con Cheques cerrado, **se completan los 5 ítems del documento "Mejoras para implementar en ADMIN"** (Facturación: tercer flujo → Siempre factura → Informes → IVA por línea → Cheques). Queda pendiente, tal como se definió en su momento: las Etapas 2 y 3 de la revisión integral (consistencia/UX y rendimiento, pospuestas cuando llegó este documento de mejoras), y al final de todo, el alta de usuarios con PIN.

@@ -5,10 +5,10 @@ import { useToast } from '@/core/hooks/useToast'
 import { TextField } from '@/core/components/TextField'
 import { DateField } from '@/core/components/DateField'
 import { CurrencyField } from '@/core/components/CurrencyField'
-import { Select } from '@/core/components/Select'
 import { CampoTextoLargo } from '@/core/components/FormBlock'
 import { ArchivoAdjunto } from '@/core/components/ArchivoAdjunto'
 import { Button } from '@/core/components/Button'
+import { SelectorEntidadDialog, type ItemSelectorEntidad } from '@/core/components/SelectorEntidadDialog'
 import { hoyISO } from '@/core/lib/format'
 import { useClientes } from '@/modules/clientes/api'
 import { useCrearCheque, useAdjuntarComprobanteCheque } from './api'
@@ -33,9 +33,19 @@ export function AltaCheque() {
   const adjuntar = useAdjuntarComprobanteCheque()
 
   const [valores, setValores] = React.useState<ChequeFormValues>(() => valoresChequeVacio(hoyISO()))
+  const [nombreClienteElegido, setNombreClienteElegido] = React.useState('')
+  const [mostrarSelectorCliente, setMostrarSelectorCliente] = React.useState(false)
   const [foto, setFoto] = React.useState<File | null>(null)
   const [errores, setErrores] = React.useState<ReturnType<typeof validarCheque>>({})
   const [mostrarErrores, setMostrarErrores] = React.useState(false)
+
+  const itemsClientes: ItemSelectorEntidad[] = (clientes ?? []).map((c) => ({ id: c.id, nombre: c.nombre_apellido }))
+
+  function manejarElegirCliente(item: ItemSelectorEntidad) {
+    actualizar('cliente_id', item.id)
+    setNombreClienteElegido(item.nombre)
+    setMostrarSelectorCliente(false)
+  }
 
   function actualizar<K extends keyof ChequeFormValues>(campo: K, valor: ChequeFormValues[K]) {
     setValores((actuales) => ({ ...actuales, [campo]: valor }))
@@ -72,14 +82,17 @@ export function AltaCheque() {
 
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Select
-              label="Cliente (de quién se recibe)"
-              value={valores.cliente_id || undefined}
-              onValueChange={(v) => actualizar('cliente_id', v)}
-              opciones={(clientes ?? []).map((c) => ({ value: c.id, label: c.nombre_apellido }))}
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cliente (de quién se recibe)</p>
+            <button
+              type="button"
+              onClick={() => setMostrarSelectorCliente(true)}
               disabled={cargandoClientes}
-              placeholder={cargandoClientes ? 'Cargando...' : 'Seleccionar...'}
-            />
+              className="flex h-11 w-full items-center justify-between rounded-md border border-border px-3 text-left text-sm disabled:opacity-60"
+            >
+              <span className={nombreClienteElegido ? 'text-foreground' : 'text-muted-foreground'}>
+                {cargandoClientes ? 'Cargando...' : nombreClienteElegido || 'Elegir cliente...'}
+              </span>
+            </button>
             {mostrarErrores && errores.cliente_id && <p className="mt-1 text-xs text-error">{errores.cliente_id}</p>}
           </div>
           <TextField
@@ -139,6 +152,16 @@ export function AltaCheque() {
           </Button>
         </div>
       </div>
+
+      <SelectorEntidadDialog
+        abierto={mostrarSelectorCliente}
+        onOpenChange={setMostrarSelectorCliente}
+        titulo="Elegí un cliente"
+        items={itemsClientes}
+        onSeleccionar={manejarElegirCliente}
+        cargando={cargandoClientes}
+        placeholderBusqueda="Buscar clientes..."
+      />
     </form>
   )
 }
