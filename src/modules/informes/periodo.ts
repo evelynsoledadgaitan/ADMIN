@@ -4,7 +4,7 @@
  * del momento actual — ver docs/sistemas/informes-diseno.md, sección 3).
  */
 
-export type TipoPeriodo = 'hoy' | 'semana' | 'mes' | 'anio' | 'personalizado'
+export type TipoPeriodo = 'hoy' | 'semana' | 'mes' | 'mes_anterior' | 'anio' | 'anio_anterior' | 'personalizado'
 
 export interface RangoFechas {
   desde: string // ISO yyyy-mm-dd
@@ -15,7 +15,9 @@ export const ETIQUETAS_PERIODO: Record<TipoPeriodo, string> = {
   hoy: 'Hoy',
   semana: 'Esta semana',
   mes: 'Este mes',
+  mes_anterior: 'Mes anterior',
   anio: 'Este año',
+  anio_anterior: 'Año anterior',
   personalizado: 'Rango personalizado'
 }
 
@@ -32,7 +34,11 @@ function aISO(fecha: Date): string {
 
 /**
  * Siempre termina hoy (nunca en el futuro) — "esta semana/mes/año" mira
- * hacia atrás desde hoy, no el período calendario completo.
+ * hacia atrás desde hoy, no el período calendario completo. "Mes/Año
+ * anterior" son la excepción a propósito: ahí sí se pide el período
+ * calendario completo ya cerrado (ej. todo junio, no "los últimos 30
+ * días"), porque es lo que tiene sentido para comparar contra un mes
+ * que ya terminó.
  */
 export function calcularRango(tipo: TipoPeriodo, personalizado?: RangoFechas): RangoFechas {
   const hoy = hoyISO()
@@ -52,10 +58,22 @@ export function calcularRango(tipo: TipoPeriodo, personalizado?: RangoFechas): R
     return { desde: aISO(fecha), hasta: hoy }
   }
 
+  if (tipo === 'mes_anterior') {
+    const hoyDate = new Date()
+    const inicioMesAnterior = new Date(hoyDate.getFullYear(), hoyDate.getMonth() - 1, 1)
+    const finMesAnterior = new Date(hoyDate.getFullYear(), hoyDate.getMonth(), 0)
+    return { desde: aISO(inicioMesAnterior), hasta: aISO(finMesAnterior) }
+  }
+
   if (tipo === 'anio') {
     const fecha = new Date()
     fecha.setMonth(0, 1)
     return { desde: aISO(fecha), hasta: hoy }
+  }
+
+  if (tipo === 'anio_anterior') {
+    const anioAnterior = new Date().getFullYear() - 1
+    return { desde: `${anioAnterior}-01-01`, hasta: `${anioAnterior}-12-31` }
   }
 
   return personalizado ?? { desde: hoy, hasta: hoy }

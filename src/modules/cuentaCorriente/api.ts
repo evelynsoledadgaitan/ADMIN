@@ -111,3 +111,31 @@ export function useSaldosClientes() {
     }
   })
 }
+
+export interface SaldoConActividad {
+  saldo: number
+  ultimaActividad: string | null
+}
+
+/**
+ * Misma función SQL que `useSaldosClientes` (`saldos_clientes()`,
+ * extendida en la migración 0054) — un hook aparte en vez de cambiar el
+ * de arriba, para no tocar los 8 lugares que ya lo usan (Listado de
+ * Clientes) solo porque Informes necesita un dato más. Ordenar por
+ * "Más reciente/antigua actividad" en Informes usa esto.
+ */
+export function useSaldosClientesConActividad() {
+  return useQuery({
+    queryKey: ['saldos_clientes', 'con_actividad'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('saldos_clientes')
+      if (error) throw error
+      return new Map(
+        (data as { cliente_id: string; saldo: number; ultima_actividad: string | null }[]).map((f) => [
+          f.cliente_id,
+          { saldo: f.saldo, ultimaActividad: f.ultima_actividad }
+        ])
+      )
+    }
+  })
+}

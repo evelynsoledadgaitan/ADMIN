@@ -1,41 +1,60 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatearMoneda, formatearFecha } from '@/core/lib/format'
-import { useProveedores, useSaldosProveedores } from '@/modules/proveedores/api'
+import { useProveedores, useSaldosProveedoresConActividad } from '@/modules/proveedores/api'
 import { useMediosPago } from '@/modules/pagos/api'
 import { useTodosLosMovimientos } from './api'
 import { SeccionInforme } from './SeccionInforme'
 import { TablaSimple, type ColumnaTablaSimple } from '@/core/components/TablaSimple'
 import { BotonExportar } from './BotonExportar'
 import { FiltroPeriodo } from './FiltroPeriodo'
+import { ControlesOrdenFiltro } from './ControlesOrdenFiltro'
+import { ResumenSaldo } from './ResumenSaldo'
+import { filtrarPorSaldo, ordenarPorCriterio, type OrdenSaldo, type FiltroSaldo } from './ordenFiltroSaldo'
 import { calcularRango, fechaEnRango, type RangoFechas } from './periodo'
 import type { Proveedor } from '@/modules/proveedores/types'
 import type { Movimiento } from '@/modules/pagos/types'
 
 interface FilaProveedor {
   proveedor: Proveedor
+  nombre: string
   saldo: number
+  ultimaActividad: string | null
 }
 
-/** Informes de Proveedores — Deudas pendientes (saldo, sin período) y Pagos realizados (con filtro de período). */
+/**
+ * Informes de Proveedores — Deudas pendientes (saldo, sin período, con
+ * Filtro + Orden + rango de importe, igual que Clientes — decisión
+ * aprobada: misma experiencia en los dos) y Pagos realizados (con
+ * filtro de período, sin cambios).
+ */
 export function InformesProveedores() {
   const navigate = useNavigate()
   const { data: proveedores, isLoading: cargandoProveedores } = useProveedores()
-  const { data: saldos, isLoading: cargandoSaldos } = useSaldosProveedores()
+  const { data: saldos, isLoading: cargandoSaldos } = useSaldosProveedoresConActividad()
   const { data: pagos, isLoading: cargandoPagos } = useTodosLosMovimientos('pago')
   const { data: mediosPago } = useMediosPago()
 
   const [rango, setRango] = React.useState<RangoFechas>(() => calcularRango('mes'))
+  const [orden, setOrden] = React.useState<OrdenSaldo>('mayor_deuda')
+  const [filtro, setFiltro] = React.useState<FiltroSaldo>('con_deuda')
+  const [importeDesde, setImporteDesde] = React.useState<number | null>(null)
+  const [importeHasta, setImporteHasta] = React.useState<number | null>(null)
 
   const cargandoDeudas = cargandoProveedores || cargandoSaldos
 
-  const filasDeuda: FilaProveedor[] = React.useMemo(() => {
+  const filas: FilaProveedor[] = React.useMemo(() => {
     if (!proveedores || !saldos) return []
-    return proveedores
-      .map((p) => ({ proveedor: p, saldo: saldos.get(p.id) ?? 0 }))
-      .filter((f) => f.saldo > 0)
-      .sort((a, b) => b.saldo - a.saldo)
+    return proveedores.map((p) => {
+      const info = saldos.get(p.id)
+      return { proveedor: p, nombre: p.nombre, saldo: info?.saldo ?? 0, ultimaActividad: info?.ultimaActividad ?? null }
+    })
   }, [proveedores, saldos])
+
+  const filasFiltradas = React.useMemo(
+    () => ordenarPorCriterio(filtrarPorSaldo(filas, filtro, importeDesde, importeHasta), orden),
+    [filas, filtro, importeDesde, importeHasta, orden]
+  )
 
   const pagosFiltrados = React.useMemo(() => {
     if (!pagos) return []
@@ -44,7 +63,14 @@ export function InformesProveedores() {
 
   const columnasDeuda: ColumnaTablaSimple<FilaProveedor>[] = [
     { clave: 'nombre', encabezado: 'Proveedor', render: (f) => f.proveedor.nombre },
-    { clave: 'saldo', encabezado: 'Saldo', alineacion: 'right', render: (f) => formatearMoneda(f.saldo) }
+    {
+      clave: 'saldo',
+      encabezado: 'Saldo',
+      alineacion: 'right',
+      render: (f) => (
+        <span className={f.saldo > 0 ? 'text-error' : f.saldo < 0 ? 'text-exito' : undefined}>{formatearMoneda(Math.abs(f.saldo))}</span>
+      )
+    }
   ]
 
   const columnasPagos: ColumnaTablaSimple<Movimiento & { proveedor: { nombre: string } | null }>[] = [
@@ -62,19 +88,33 @@ export function InformesProveedores() {
     <div className="space-y-6">
       <SeccionInforme modulo="proveedores">
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Deudas pendientes</h2>
+          <h2 className="text-sm font-semibold text-foreground">Proveedores</h2>
           <BotonExportar
-            titulo="Proveedores — Deudas pendientes"
+            titulo="Proveedores"
             columnas={[{ clave: 'nombre', encabezado: 'Proveedor' }, { clave: 'saldo', encabezado: 'Saldo' }]}
-            filas={filasDeuda.map((f) => ({ nombre: f.proveedor.nombre, saldo: f.saldo }))}
-            nombreArchivo="proveedores-deudas-pendientes"
+            filas={filasFiltradas.map((f) => ({ nombre: f.proveedor.nombre, saldo: Math.abs(f.saldo) }))}
+            nombreArchivo="proveedores-saldos"
           />
         </div>
+
+        <ResumenSaldo filas={filas} />
+
+        <ControlesOrdenFiltro
+          orden={orden}
+          onOrdenChange={setOrden}
+          filtro={filtro}
+          onFiltroChange={setFiltro}
+          importeDesde={importeDesde}
+          onImporteDesdeChange={setImporteDesde}
+          importeHasta={importeHasta}
+          onImporteHastaChange={setImporteHasta}
+        />
+
         <TablaSimple
-          items={filasDeuda}
+          items={filasFiltradas}
           getKey={(f) => f.proveedor.id}
           columnas={columnasDeuda}
-          emptyMensaje="No hay deudas pendientes con proveedores."
+          emptyMensaje="No hay proveedores que cumplan ese filtro."
           cargando={cargandoDeudas}
           onRowClick={(f) => navigate(`/proveedores/${f.proveedor.id}/cuenta`)}
         />

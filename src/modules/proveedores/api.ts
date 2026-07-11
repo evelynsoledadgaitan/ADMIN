@@ -232,3 +232,20 @@ export function useSaldosProveedores() {
     }
   })
 }
+
+/** Misma función SQL que `useSaldosProveedores` (extendida en la migración 0054) — hook aparte para no tocar el listado, mismo criterio que `useSaldosClientesConActividad`. */
+export function useSaldosProveedoresConActividad() {
+  return useQuery({
+    queryKey: ['saldos_proveedores', 'con_actividad'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('saldos_proveedores')
+      if (error) throw error
+      return new Map(
+        (data as { proveedor_id: string; saldo: number; ultima_actividad: string | null }[]).map((f) => [
+          f.proveedor_id,
+          { saldo: f.saldo, ultimaActividad: f.ultima_actividad }
+        ])
+      )
+    }
+  })
+}

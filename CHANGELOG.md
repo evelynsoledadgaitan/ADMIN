@@ -4,6 +4,29 @@ Historial de cambios de ADMIN, un Sprint por entrada. Formato acordado a partir 
 
 ---
 
+## Informes — períodos, ordenamiento, filtros, resumen
+
+Tercer ítem del documento "Mejoras para implementar en ADMIN" (orden: Facturación → Siempre factura → **Informes** → IVA por línea → Cheques). Ver `docs/sistemas/informes-mejoras-diseno.md` y decisión `0038`.
+
+### ✅ Agregado
+- **Ordenar por**: Mayor deuda / Menor deuda / A-Z / Z-A / Más reciente actividad / Más antigua actividad — igual en Clientes y Proveedores.
+- **Filtrar por**: Todos / Sólo con deuda / Sólo saldo a favor / Sin movimientos (saldo $0) + rango de importe (Desde/Hasta, en valor absoluto).
+- **Resumen superior**: cantidad con deuda, total adeudado, promedio de deuda — calculado sobre lo que está filtrado en pantalla.
+- **"Mes anterior" / "Año anterior"** en el filtro de período — a diferencia de los demás (que siempre llegan hasta hoy), son el período calendario completo ya cerrado.
+- "Más reciente/antigua actividad" — sin ninguna consulta nueva a la base: se extendieron `saldos_clientes()`/`saldos_proveedores()` (funciones SQL ya existentes) para devolver también la fecha, en la misma llamada de siempre.
+
+### 🔧 Cambios
+- Los informes de Clientes y Proveedores pasan de 3 secciones fijas a una sola, con los controles nuevos — menos código repetido, más flexible.
+- `useSaldosClientesConActividad`/`useSaldosProveedoresConActividad` (nuevos) — los hooks existentes (`useSaldosClientes`/`useSaldosProveedores`, usados en 8 lugares de los listados) no se tocaron.
+
+### 🐞 Errores corregidos
+- Ninguno.
+
+### ⚠️ Pendiente
+- Siguiente ítem del orden acordado: IVA por línea de artículo — el de mayor riesgo arquitectónico de los 5.
+
+---
+
 ## Clientes "Siempre factura" — tareas pendientes de facturación
 
 Segundo ítem del documento "Mejoras para implementar en ADMIN" (orden: Facturación → **Siempre factura** → Informes → IVA por línea → Cheques). Ver `docs/sistemas/siempre-factura-diseno.md` y decisión `0037`.

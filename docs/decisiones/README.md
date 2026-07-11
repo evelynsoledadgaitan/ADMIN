@@ -39,3 +39,4 @@ Cada archivo de esta carpeta documenta **una** decisión de arquitectura: qué s
 35. [0035 — Notas (cierre del roadmap funcional de ADMIN v1.0)](./0035-notas.md)
 36. [0036 — Recuperación de contraseña](./0036-recuperacion-password.md)
 37. [0037 — Clientes "Siempre factura": tareas pendientes de facturación](./0037-siempre-factura.md)
+38. [0038 — Informes: períodos, ordenamiento, filtros, resumen](./0038-informes-mejoras.md)
