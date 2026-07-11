@@ -257,7 +257,6 @@ export function useRegistrarFactura(clienteId: string) {
           cliente_id: clienteId,
           fecha: valores.fecha,
           total,
-          iva: valores.iva,
           nota: valores.nota.trim() === '' ? null : valores.nota.trim(),
           movimiento_id: movimientoId
         })
@@ -271,6 +270,7 @@ export function useRegistrarFactura(clienteId: string) {
         descripcion: item.descripcion.trim(),
         cantidad: item.cantidad as number,
         precio_unitario: item.precio_unitario as number,
+        iva: item.iva,
         subtotal: subtotalLinea(item)
       }))
       const { error: errorItems } = await supabase.from('factura_items').insert(itemsAInsertar)

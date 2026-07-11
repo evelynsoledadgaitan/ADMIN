@@ -16,7 +16,7 @@ import { CampoTextoLargo } from '@/core/components/FormBlock'
 import { formatearMoneda, formatearFecha } from '@/core/lib/format'
 import { urlFirmadaAdjunto } from '@/core/lib/adjuntos'
 import { useFactura, useFacturaItems, useDeudaDeFactura, useCobroDeFactura, useAnularFactura, useEditarEmisionFactura } from './api'
-import { formatearNumeroFactura, calcularNetoEIva, ETIQUETAS_IVA } from './types'
+import { formatearNumeroFactura, calcularDesgloseIva, ETIQUETAS_IVA } from './types'
 import { formatearNumeroDeuda } from '@/modules/clientes/types'
 import { useNumeracion, useDatosNegocio } from '@/modules/configuracion/api'
 import { EstadoFacturaBadge } from './EstadoFacturaBadge'
@@ -89,7 +89,7 @@ export function FichaFactura() {
   const yaAnulada = factura.archived_at !== null
   const facturaId = factura.id
   const numeroVisible = factura.numero_externo ?? formatearNumeroFactura(factura.numero_interno, prefijos?.facturas)
-  const { neto, importeIva } = calcularNetoEIva(factura.total, factura.iva)
+  const desgloseIva = calcularDesgloseIva((items ?? []).map((item) => ({ subtotal: item.subtotal, iva: item.iva })))
 
   async function handleConfirmarAnulacion() {
     const confirmado = await confirmar({
@@ -180,6 +180,7 @@ export function FichaFactura() {
                 <th className="py-1.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descripción</th>
                 <th className="py-1.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cant.</th>
                 <th className="py-1.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Precio</th>
+                <th className="py-1.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">IVA</th>
                 <th className="py-1.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Subtotal</th>
               </tr>
             </thead>
@@ -189,6 +190,7 @@ export function FichaFactura() {
                   <td className="py-2 text-foreground">{item.descripcion}</td>
                   <td className="py-2 text-right tabular-nums text-foreground">{item.cantidad}</td>
                   <td className="py-2 text-right tabular-nums text-foreground">{formatearMoneda(item.precio_unitario)}</td>
+                  <td className="py-2 text-right tabular-nums text-muted-foreground">{ETIQUETAS_IVA[item.iva]}</td>
                   <td className="py-2 text-right tabular-nums text-foreground">{formatearMoneda(item.subtotal)}</td>
                 </tr>
               ))}
@@ -196,19 +198,28 @@ export function FichaFactura() {
           </table>
 
           <div className="mt-4 rounded-lg bg-muted p-4 print:border print:border-border print:bg-transparent">
-            {factura.iva !== 'exento' && (
-              <>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>Neto</span>
-                  <span className="tabular-nums">{formatearMoneda(neto)}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>IVA ({ETIQUETAS_IVA[factura.iva]})</span>
-                  <span className="tabular-nums">{formatearMoneda(importeIva)}</span>
-                </div>
-                <div className="my-2 border-t border-border" />
-              </>
-            )}
+            {desgloseIva.map((grupo) => (
+              <React.Fragment key={grupo.tasa}>
+                {grupo.tasa !== 'exento' ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>Neto ({ETIQUETAS_IVA[grupo.tasa]})</span>
+                      <span className="tabular-nums">{formatearMoneda(grupo.neto)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>IVA ({ETIQUETAS_IVA[grupo.tasa]})</span>
+                      <span className="tabular-nums">{formatearMoneda(grupo.importeIva)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>Exento</span>
+                    <span className="tabular-nums">{formatearMoneda(grupo.neto)}</span>
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
+            {desgloseIva.length > 0 && <div className="my-2 border-t border-border" />}
             <div className="flex items-center justify-between">
               <span className="text-base font-semibold text-foreground">Total</span>
               <span className="text-2xl font-bold tabular-nums text-foreground">{formatearMoneda(factura.total)}</span>

@@ -4,6 +4,28 @@ Historial de cambios de ADMIN, un Sprint por entrada. Formato acordado a partir 
 
 ---
 
+## Facturación — IVA por línea de artículo
+
+Cuarto ítem del documento "Mejoras para implementar en ADMIN" (orden: Facturación → Siempre factura → Informes → **IVA por línea** → Cheques) — el de mayor riesgo arquitectónico de los 5. Ver `docs/sistemas/iva-por-linea-diseno.md` y decisión `0039`.
+
+### ✅ Agregado
+- Cada línea de una factura tiene su propia tasa de IVA (Exento/10,5%/21%/27%) — se pueden mezclar tasas distintas dentro de la misma factura.
+- Resumen económico con desglose por tasa cuando corresponde (Neto + IVA por cada tasa presente) — con una sola tasa, se ve igual que antes.
+- Una línea nueva hereda la tasa de la anterior; la primera línea de una factura nueva arranca en Exento.
+- Columna IVA en la tabla de líneas de la Ficha de factura.
+
+### 🔧 Cambios
+- `facturas.iva` (una tasa por factura) reemplazada por `factura_items.iva` (una tasa por línea) — con migración de datos: las facturas ya cargadas mantienen su tasa, copiada a cada una de sus líneas.
+- `calcularNetoEIva(total, iva)` reemplazada por `calcularDesgloseIva(items)`.
+
+### 🐞 Errores corregidos
+- Ninguno.
+
+### ⚠️ Pendiente
+- Último ítem del orden acordado: módulo Cheques completo.
+
+---
+
 ## Informes — períodos, ordenamiento, filtros, resumen
 
 Tercer ítem del documento "Mejoras para implementar en ADMIN" (orden: Facturación → Siempre factura → **Informes** → IVA por línea → Cheques). Ver `docs/sistemas/informes-mejoras-diseno.md` y decisión `0038`.

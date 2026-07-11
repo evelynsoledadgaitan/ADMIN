@@ -497,7 +497,6 @@ export interface Database {
           cliente_id: string
           fecha: string
           total: number
-          iva: 'exento' | '10.5' | '21' | '27'
           nota: string | null
           comprobante_path: string | null
           movimiento_id: string | null
@@ -541,6 +540,7 @@ export interface Database {
           descripcion: string
           cantidad: number
           precio_unitario: number
+          iva: 'exento' | '10.5' | '21' | '27'
           subtotal: number
           created_at: Timestamp
         }
@@ -549,6 +549,7 @@ export interface Database {
           descripcion: string
           cantidad: number
           precio_unitario: number
+          iva: 'exento' | '10.5' | '21' | '27'
           subtotal: number
         }
         Update: Partial<Database['public']['Tables']['factura_items']['Row']>

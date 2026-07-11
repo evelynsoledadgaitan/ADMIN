@@ -28,7 +28,7 @@ import {
   nuevaLineaVacia,
   subtotalLinea,
   totalFactura,
-  calcularNetoEIva,
+  calcularDesgloseIva,
   ETIQUETAS_IVA,
   type FacturaFormValues,
   type TasaIva
@@ -85,7 +85,10 @@ export function NuevaFactura() {
   }
 
   function agregarLinea() {
-    setValores((actuales) => ({ ...actuales, items: [...actuales.items, nuevaLineaVacia()] }))
+    setValores((actuales) => {
+      const ultimaTasa = actuales.items[actuales.items.length - 1]?.iva
+      return { ...actuales, items: [...actuales.items, nuevaLineaVacia(ultimaTasa)] }
+    })
   }
 
   function quitarLinea(idLocal: string) {
@@ -136,7 +139,7 @@ export function NuevaFactura() {
     // Sigue siendo editable: se puede ajustar o agregar más líneas.
     setValores((actuales) => ({
       ...actuales,
-      items: [{ idLocal: crypto.randomUUID(), producto_id: null, descripcion: deuda.descripcion, cantidad: 1, precio_unitario: deuda.monto }]
+      items: [{ idLocal: crypto.randomUUID(), producto_id: null, descripcion: deuda.descripcion, cantidad: 1, precio_unitario: deuda.monto, iva: 'exento' }]
     }))
   }
 
@@ -200,6 +203,7 @@ export function NuevaFactura() {
   }
 
   const total = totalFactura(valores.items)
+  const desgloseIva = calcularDesgloseIva(valores.items.map((item) => ({ subtotal: subtotalLinea(item), iva: item.iva })))
   const itemsProductoSelector: ItemSelectorEntidad[] = (productos ?? []).map((p) => ({
     id: p.id,
     nombre: p.nombre,
@@ -230,19 +234,13 @@ export function NuevaFactura() {
 
       <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
         <div className="flex-1 space-y-4 overflow-y-auto p-4 lg:mx-auto lg:w-full lg:max-w-2xl">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <DateField
               label="Fecha"
               value={valores.fecha}
               max={hoyISO()}
               onChange={(e) => actualizar('fecha', e.target.value)}
               error={mostrarErrores ? errores.fecha : undefined}
-            />
-            <Select
-              label="IVA"
-              value={valores.iva}
-              onValueChange={(v) => actualizar('iva', v as TasaIva)}
-              opciones={Object.entries(ETIQUETAS_IVA).map(([value, label]) => ({ value, label }))}
             />
           </div>
 
@@ -383,7 +381,7 @@ export function NuevaFactura() {
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <TextField
                         label="Cantidad"
                         type="number"
@@ -398,6 +396,12 @@ export function NuevaFactura() {
                         value={item.precio_unitario}
                         onValueChange={(v) => actualizarLinea(item.idLocal, { precio_unitario: v })}
                         error={mostrarErrores ? erroresLinea.precio_unitario : undefined}
+                      />
+                      <Select
+                        label="IVA"
+                        value={item.iva}
+                        onValueChange={(v) => actualizarLinea(item.idLocal, { iva: v as TasaIva })}
+                        opciones={Object.entries(ETIQUETAS_IVA).map(([value, label]) => ({ value, label }))}
                       />
                       <div className="grid gap-1.5 text-sm">
                         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Subtotal</span>
@@ -427,18 +431,27 @@ export function NuevaFactura() {
 
         <div className="border-t border-border p-4">
           <div className="mb-3 space-y-1 lg:mx-auto lg:w-full lg:max-w-2xl">
-            {valores.iva !== 'exento' && (
-              <>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>Neto</span>
-                  <span className="tabular-nums">{formatearMoneda(calcularNetoEIva(total, valores.iva).neto)}</span>
-                </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>IVA ({ETIQUETAS_IVA[valores.iva]})</span>
-                  <span className="tabular-nums">{formatearMoneda(calcularNetoEIva(total, valores.iva).importeIva)}</span>
-                </div>
-              </>
-            )}
+            {desgloseIva.map((grupo) => (
+              <React.Fragment key={grupo.tasa}>
+                {grupo.tasa !== 'exento' ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>Neto ({ETIQUETAS_IVA[grupo.tasa]})</span>
+                      <span className="tabular-nums">{formatearMoneda(grupo.neto)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>IVA ({ETIQUETAS_IVA[grupo.tasa]})</span>
+                      <span className="tabular-nums">{formatearMoneda(grupo.importeIva)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>Exento</span>
+                    <span className="tabular-nums">{formatearMoneda(grupo.neto)}</span>
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-foreground">Total</span>
               <span className="text-xl font-semibold tabular-nums text-foreground">{formatearMoneda(total)}</span>

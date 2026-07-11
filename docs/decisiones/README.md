@@ -40,3 +40,4 @@ Cada archivo de esta carpeta documenta **una** decisión de arquitectura: qué s
 36. [0036 — Recuperación de contraseña](./0036-recuperacion-password.md)
 37. [0037 — Clientes "Siempre factura": tareas pendientes de facturación](./0037-siempre-factura.md)
 38. [0038 — Informes: períodos, ordenamiento, filtros, resumen](./0038-informes-mejoras.md)
+39. [0039 — Facturación: IVA por línea de artículo](./0039-iva-por-linea.md)
