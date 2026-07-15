@@ -1,22 +1,26 @@
-import type { MovimientoFormValues } from './types'
-
-export type ErroresMovimiento = Partial<Record<keyof MovimientoFormValues, string>>
-
-/** Fecha de hoy en formato ISO (yyyy-mm-dd), en la zona horaria local del dispositivo. */
 import { hoyISO } from '@/core/lib/format'
+import type { MovimientoCompuestoFormValues, LineaMovimiento } from './types'
+
+export type ErroresLinea = Partial<Record<'medio_pago_id' | 'monto', string>>
+export interface ErroresMovimientoCompuesto {
+  fecha?: string
+  porLinea: Record<string, ErroresLinea> // idLocal -> errores
+}
+
 export { hoyISO }
 
 /**
- * Validación del formulario de Registrar cobro/pago (Sprint 3, sección 9 y
- * punto 4 de las decisiones aprobadas). Espeja en el frontend lo que la
- * migración 0012 exige en la base de datos.
+ * Validación del formulario de Registrar cobro/pago — ahora compuesto
+ * (varias líneas, decisión aprobada). Cada línea exige medio de pago y
+ * un monto mayor a cero — salvo que el medio elegido sea "Cheque", donde
+ * el monto se completa solo al elegir el cheque (ver `nombreMedioCheque`
+ * en api.ts) y lo que se valida en cambio es que haya un cheque elegido.
  */
-export function validarMovimiento(valores: MovimientoFormValues): ErroresMovimiento {
-  const errores: ErroresMovimiento = {}
-
-  if (valores.monto === null || valores.monto <= 0) {
-    errores.monto = 'Ingresá un monto mayor a cero.'
-  }
+export function validarMovimientoCompuesto(
+  valores: MovimientoCompuestoFormValues,
+  idMedioPagoCheque: string | null
+): ErroresMovimientoCompuesto {
+  const errores: ErroresMovimientoCompuesto = { porLinea: {} }
 
   if (!valores.fecha) {
     errores.fecha = 'Este dato es obligatorio.'
@@ -24,13 +28,27 @@ export function validarMovimiento(valores: MovimientoFormValues): ErroresMovimie
     errores.fecha = 'La fecha no puede ser futura.'
   }
 
-  if (!valores.medio_pago_id) {
-    errores.medio_pago_id = 'Seleccioná un medio de pago.'
+  for (const linea of valores.lineas) {
+    const erroresLinea: ErroresLinea = {}
+    if (!linea.medio_pago_id) {
+      erroresLinea.medio_pago_id = 'Elegí un medio de pago.'
+    } else if (linea.medio_pago_id === idMedioPagoCheque) {
+      if (!linea.cheque_id) erroresLinea.monto = 'Elegí un cheque de la cartera.'
+    } else if (linea.monto === null || linea.monto <= 0) {
+      erroresLinea.monto = 'Ingresá un monto mayor a cero.'
+    }
+    if (Object.keys(erroresLinea).length > 0) errores.porLinea[linea.idLocal] = erroresLinea
   }
 
   return errores
 }
 
-export function hayErrores(errores: ErroresMovimiento): boolean {
-  return Object.keys(errores).length > 0
+export function hayErroresMovimiento(errores: ErroresMovimientoCompuesto): boolean {
+  return !!errores.fecha || Object.keys(errores.porLinea).length > 0
+}
+
+export function lineaValida(linea: LineaMovimiento, idMedioPagoCheque: string | null): boolean {
+  if (!linea.medio_pago_id) return false
+  if (linea.medio_pago_id === idMedioPagoCheque) return !!linea.cheque_id
+  return linea.monto !== null && linea.monto > 0
 }

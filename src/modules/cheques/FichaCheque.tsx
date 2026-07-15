@@ -16,8 +16,10 @@ import { SelectorEntidadDialog, type ItemSelectorEntidad } from '@/core/componen
 import { subirAdjunto } from '@/core/lib/adjuntos'
 import { formatearMoneda, formatearFecha } from '@/core/lib/format'
 import { useProveedores } from '@/modules/proveedores/api'
+import { formatearNumeroMovimiento } from '@/modules/pagos/types'
 import {
   useCheque,
+  useMovimientosDeCheque,
   useDepositarCheque,
   useMarcarAcreditado,
   useMarcarRechazado,
@@ -29,10 +31,10 @@ import { EstadoChequeBadge } from './EstadoChequeBadge'
 import type { Cheque } from './types'
 
 /**
- * Ficha del cheque — datos, estado, Actividad (el historial automático
- * pedido — mismo `HistorialAuditoria` que ya usan Clientes/Proveedores/
- * Empleados/Contador, sin ninguna tabla nueva) y las acciones que
- * corresponden según el estado actual. Ver docs/sistemas/cheques-diseno.md.
+ * Ficha del cheque — datos, estado, trazabilidad completa (de qué cobro
+ * vino, a qué proveedor se entregó — pedido explícito) y las acciones
+ * que corresponden según el estado actual. Ver
+ * docs/sistemas/cheques-cartera-pagos-compuestos-diseno.md.
  */
 export function FichaCheque() {
   const { id } = useParams<{ id: string }>()
@@ -42,6 +44,7 @@ export function FichaCheque() {
   const chequeId = id ?? ''
 
   const { data: cheque, isLoading, isError } = useCheque(id)
+  const { data: movimientos } = useMovimientosDeCheque(chequeId)
   const { data: proveedores, isLoading: cargandoProveedores } = useProveedores()
   const depositar = useDepositarCheque()
   const marcarAcreditado = useMarcarAcreditado()
@@ -64,7 +67,7 @@ export function FichaCheque() {
   async function handleDepositar() {
     const confirmado = await confirmar({
       titulo: 'Depositar cheque',
-      mensaje: 'Pasa a "Depositado" — no genera ningún cobro nuevo, el ingreso ya quedó registrado al recibirlo.',
+      mensaje: 'Pasa a "Depositado" — no genera ningún cobro nuevo, el ingreso ya quedó registrado cuando se usó en el cobro.',
       textoConfirmar: 'Depositar',
       accionConfirmar: 'guardar'
     })
@@ -92,7 +95,7 @@ export function FichaCheque() {
   async function handleMarcarRechazado(chequeActual: Cheque) {
     const mensaje =
       chequeActual.estado === 'depositado'
-        ? 'El cobro que se había registrado al recibir este cheque se va a anular — el saldo del cliente vuelve a subir.'
+        ? 'El cobro que se había registrado al usar este cheque se va a anular — el saldo del cliente vuelve a subir.'
         : 'El pago al proveedor que se había registrado al entregar este cheque se va a anular.'
     const confirmado = await confirmar({
       titulo: 'Marcar como rechazado',
@@ -121,7 +124,7 @@ export function FichaCheque() {
   async function handleAnular(chequeActual: Cheque) {
     const confirmado = await confirmar({
       titulo: 'Anular cheque',
-      mensaje: 'Se anula el cobro asociado (y el pago al proveedor, si ya se había entregado). El cheque no se elimina, queda marcado como anulado.',
+      mensaje: 'Se anula cualquier cobro y/o pago que haya usado este cheque. El cheque no se elimina, queda marcado como anulado.',
       textoConfirmar: 'Anular',
       accionConfirmar: 'archivar'
     })
@@ -149,6 +152,8 @@ export function FichaCheque() {
 
   const itemsProveedores: ItemSelectorEntidad[] = (proveedores ?? []).map((p) => ({ id: p.id, nombre: p.nombre }))
   const esEstadoFinal = cheque.estado === 'acreditado' || cheque.estado === 'rechazado' || cheque.estado === 'anulado'
+  const cobro = movimientos?.find((m) => m.tipo === 'cobro')
+  const pago = movimientos?.find((m) => m.tipo === 'pago')
 
   return (
     <div className="flex h-full flex-col overflow-y-auto p-4 space-y-4">
@@ -164,7 +169,6 @@ export function FichaCheque() {
           <CampoSoloLectura label="CUIT" valor={cheque.cuit ?? undefined} />
           <CampoSoloLectura label="Fecha de emisión" valor={formatearFecha(cheque.fecha_emision)} />
           <CampoSoloLectura label="Fecha de vencimiento" valor={formatearFecha(cheque.fecha_vencimiento)} />
-          <CampoSoloLectura label="Recibido de" valor={cheque.cliente?.nombre_apellido} />
         </div>
         {cheque.observaciones && (
           <div className="mt-4">
@@ -174,19 +178,39 @@ export function FichaCheque() {
         )}
       </Card>
 
-      {/* Trazabilidad — a quién se entregó y con qué pago (pedido explícito) */}
-      {cheque.proveedor && (
-        <Card>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Entregado a</p>
-          <p className="mb-1 text-sm text-foreground">{cheque.proveedor.nombre}</p>
-          {cheque.proveedor_id && (
-            <Link
-              to={`/proveedores/${cheque.proveedor_id}/cuenta`}
-              className="flex items-center gap-1.5 text-sm font-medium text-primary"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Ver el pago en su Estado de Cuenta
-            </Link>
+      {/* Trazabilidad completa — de qué cobro vino, a quién se entregó (pedido explícito) */}
+      {(cobro || pago) && (
+        <Card className="space-y-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Trazabilidad</p>
+          {cobro && (
+            <div>
+              <p className="text-sm text-foreground">
+                Recibido de <strong>{cheque.cliente?.nombre_apellido ?? '—'}</strong>
+                {cobro.archived_at && <span className="ml-2 text-xs font-semibold text-error">ANULADO</span>}
+              </p>
+              <Link
+                to={`/clientes/${cobro.cliente_id}/cuenta`}
+                className="flex items-center gap-1.5 text-sm font-medium text-primary"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Ver el cobro {formatearNumeroMovimiento(cobro.numero_interno)} en su Estado de Cuenta
+              </Link>
+            </div>
+          )}
+          {pago && (
+            <div>
+              <p className="text-sm text-foreground">
+                Entregado a <strong>{cheque.proveedor?.nombre ?? '—'}</strong>
+                {pago.archived_at && <span className="ml-2 text-xs font-semibold text-error">ANULADO</span>}
+              </p>
+              <Link
+                to={`/proveedores/${pago.proveedor_id}/cuenta`}
+                className="flex items-center gap-1.5 text-sm font-medium text-primary"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Ver el pago {formatearNumeroMovimiento(pago.numero_interno)} en su Estado de Cuenta
+              </Link>
+            </div>
           )}
         </Card>
       )}
@@ -211,6 +235,12 @@ export function FichaCheque() {
       {!esEstadoFinal && (
         <Card className="space-y-2">
           <h2 className="mb-1 text-sm font-semibold text-foreground">Acciones</h2>
+          {cheque.estado === 'en_cartera' && (
+            <p className="text-sm text-muted-foreground">
+              Todavía no se usó — se vincula a un cliente o proveedor desde "Registrar cobro" o "Registrar pago", eligiéndolo de la
+              cartera.
+            </p>
+          )}
           {cheque.estado === 'disponible' && (
             <>
               <Button accion="guardar" className="w-full" onClick={handleDepositar} disabled={depositar.isPending}>

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/app/providers/AuthProvider'
-import type { Ajuste, AjusteFormValues, TipoEntidadCC } from './types'
+import type { Ajuste, AjusteFormValues, TipoEntidadCC, Transferencia, TransferenciaFormValues } from './types'
 
 const COLUMNA_ENTIDAD: Record<TipoEntidadCC, 'cliente_id' | 'proveedor_id'> = {
   cliente: 'cliente_id',
@@ -136,6 +136,111 @@ export function useSaldosClientesConActividad() {
           { saldo: f.saldo, ultimaActividad: f.ultima_actividad }
         ])
       )
+    }
+  })
+}
+
+// ---- Transferencia entre cuentas -------------------------------------------
+
+/**
+ * Registrar una transferencia — de la cuenta de `origenClienteId` hacia
+ * la de `valores.destino_cliente_id`. Por dentro, dos Ajustes con signo
+ * opuesto, agrupados por `transferencia_id` (decisión aprobada, ver
+ * docs/sistemas/cheques-cartera-pagos-compuestos-diseno.md) — sin
+ * ningún cálculo de saldo nuevo, `saldos_clientes()` ya suma
+ * `ajustes_cuenta` tal como siempre.
+ */
+export function useRegistrarTransferencia(origenClienteId: string, nombreOrigen: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ valores, nombreDestino }: { valores: TransferenciaFormValues; nombreDestino: string }) => {
+      const transferenciaId = crypto.randomUUID()
+      const importe = valores.importe as number
+      const motivoUsuario = valores.motivo.trim()
+
+      const { error: errorTransferencia } = await supabase.from('transferencias_cuenta').insert({
+        id: transferenciaId,
+        origen_cliente_id: origenClienteId,
+        destino_cliente_id: valores.destino_cliente_id,
+        importe,
+        fecha: valores.fecha,
+        motivo: motivoUsuario === '' ? null : motivoUsuario
+      })
+      if (errorTransferencia) throw errorTransferencia
+
+      const sufijo = motivoUsuario ? ` — ${motivoUsuario}` : ''
+      const { error: errorAjustes } = await supabase.from('ajustes_cuenta').insert([
+        {
+          cliente_id: origenClienteId,
+          monto: importe, // positivo = aumenta lo que debe (pierde el saldo a favor que cede)
+          motivo: `Transferencia a ${nombreDestino}${sufijo}`,
+          fecha: valores.fecha,
+          transferencia_id: transferenciaId
+        },
+        {
+          cliente_id: valores.destino_cliente_id,
+          monto: -importe, // negativo = reduce lo que debe
+          motivo: `Transferencia desde ${nombreOrigen}${sufijo}`,
+          fecha: valores.fecha,
+          transferencia_id: transferenciaId
+        }
+      ])
+      if (errorAjustes) throw errorAjustes
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ajustes_cuenta'] })
+      queryClient.invalidateQueries({ queryKey: ['saldo_cliente'] })
+      queryClient.invalidateQueries({ queryKey: ['saldos_clientes'] })
+      queryClient.invalidateQueries({ queryKey: ['transferencias'] })
+    }
+  })
+}
+
+/** Transferencias donde este cliente participó, como origen o como destino. */
+export function useTransferenciasCliente(clienteId: string) {
+  return useQuery({
+    queryKey: ['transferencias', clienteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transferencias_cuenta')
+        .select('*, origen:clientes!transferencias_cuenta_origen_cliente_id_fkey(nombre_apellido), destino:clientes!transferencias_cuenta_destino_cliente_id_fkey(nombre_apellido)')
+        .or(`origen_cliente_id.eq.${clienteId},destino_cliente_id.eq.${clienteId}`)
+        .order('fecha', { ascending: false })
+      if (error) throw error
+      return data as (Transferencia & { origen: { nombre_apellido: string }; destino: { nombre_apellido: string } })[]
+    }
+  })
+}
+
+/**
+ * Anular una transferencia — anula los dos Ajustes que generó (mismo
+ * criterio que anular una factura anula la deuda que generó).
+ */
+export function useAnularTransferencia() {
+  const queryClient = useQueryClient()
+  const { usuario } = useAuth()
+  return useMutation({
+    mutationFn: async ({ id, motivo }: { id: string; motivo: string }) => {
+      const ahora = new Date().toISOString()
+      const motivoFinal = motivo.trim() === '' ? null : motivo.trim()
+
+      await supabase
+        .from('ajustes_cuenta')
+        .update({ archived_at: ahora, anulado_por: usuario?.id, motivo_anulacion: 'Transferencia anulada.' })
+        .eq('transferencia_id', id)
+        .is('archived_at', null)
+
+      const { error } = await supabase
+        .from('transferencias_cuenta')
+        .update({ archived_at: ahora, anulado_por: usuario?.id, motivo_anulacion: motivoFinal })
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ajustes_cuenta'] })
+      queryClient.invalidateQueries({ queryKey: ['saldo_cliente'] })
+      queryClient.invalidateQueries({ queryKey: ['saldos_clientes'] })
+      queryClient.invalidateQueries({ queryKey: ['transferencias'] })
     }
   })
 }

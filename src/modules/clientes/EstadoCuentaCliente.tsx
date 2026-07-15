@@ -16,6 +16,7 @@ import {
 } from '@/modules/pagos'
 import {
   RegistrarAjusteDialog,
+  TransferenciaDialog,
   useSaldoCliente,
   useAjustes,
   LibroCuentaCorriente,
@@ -55,6 +56,7 @@ export function EstadoCuentaCliente() {
   const [registrandoDeuda, setRegistrandoDeuda] = React.useState(false)
   const [registrandoCobro, setRegistrandoCobro] = React.useState(false)
   const [registrandoAjuste, setRegistrandoAjuste] = React.useState(false)
+  const [mostrandoTransferencia, setMostrandoTransferencia] = React.useState(false)
 
   const [deudaSeleccionada, setDeudaSeleccionada] = React.useState<DeudaConUsuario | null>(null)
   const [cobroSeleccionado, setCobroSeleccionado] = React.useState<MovimientoConUsuario | null>(null)
@@ -142,9 +144,12 @@ export function EstadoCuentaCliente() {
           Registrar cobro
         </Button>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <button onClick={() => setRegistrandoAjuste(true)} className="text-[13px] font-medium text-primary">
           + Registrar ajuste
+        </button>
+        <button onClick={() => setMostrandoTransferencia(true)} className="text-[13px] font-medium text-primary">
+          + Transferir a otra cuenta
         </button>
         <button onClick={() => navigate(`/facturacion/nueva?cliente=${cliente.id}`)} className="text-[13px] font-medium text-primary">
           + Nueva factura
@@ -204,6 +209,12 @@ export function EstadoCuentaCliente() {
         onOpenChange={setRegistrandoAjuste}
         etiquetaAumenta="Aumenta lo que debe"
         etiquetaReduce="Reduce lo que debe"
+      />
+      <TransferenciaDialog
+        origenClienteId={cliente.id}
+        nombreOrigen={cliente.nombre_apellido}
+        abierto={mostrandoTransferencia}
+        onOpenChange={setMostrandoTransferencia}
       />
 
       <DetalleDeudaDialog

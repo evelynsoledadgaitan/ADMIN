@@ -4,6 +4,30 @@ Historial de cambios de ADMIN, un Sprint por entrada. Formato acordado a partir 
 
 ---
 
+## Cheques como cartera + pagos/cobros compuestos + Transferencia entre cuentas
+
+Reapertura de Cheques y del Motor de Pagos, a partir de dos situaciones reales de uso. Ver `docs/sistemas/cheques-cartera-pagos-compuestos-diseno.md` y decisión `0041`.
+
+### ✅ Agregado
+- **Cheques como cartera**: se cargan sin cliente, quedan "En cartera" — se vinculan recién cuando se eligen como medio de pago en un cobro o pago real.
+- **Cobros y pagos con varios medios a la vez** (efectivo + cheque, transferencia + cheque, dos cheques distintos, etc.) — `RegistrarMovimientoDialog` admite varias líneas, mismo criterio visual que las líneas de una factura.
+- **Transferencia entre cuentas**: aplicar el saldo a favor de un cliente para reducir la deuda de otro — herramienta general, con confirmación explícita antes de ejecutarse y trazabilidad completa. Accesible desde el Estado de Cuenta del cliente ("+ Transferir a otra cuenta").
+- Un cheque nunca se puede usar dos veces — al usarse, cambia de estado automáticamente y deja de aparecer disponible.
+- Trazabilidad completa en la Ficha del cheque: de qué cobro vino, a qué proveedor se entregó, con enlaces directos a los Estados de Cuenta correspondientes.
+
+### 🔧 Cambios
+- `cheques.movimiento_cobro_id`/`movimiento_pago_id` (migración 0056) se sacan — la relación pasa a vivir en `movimientos.cheque_id`, que ya existía preparado desde el primer Sprint del Motor de Pagos (migración 0012).
+- `movimientos.grupo_id` (nueva) agrupa las líneas de un mismo cobro/pago compuesto — sin ninguna tabla nueva, sin cambios en `saldos_clientes()`/`saldos_proveedores()`.
+- Anular un movimiento con un cheque vinculado ahora devuelve el cheque al estado que corresponda (a la cartera, o de vuelta a "disponible" según el caso).
+
+### 🐞 Errores corregidos
+- Ninguno.
+
+### ⚠️ Pendiente
+- Ninguno de este pedido — las 4 piezas quedaron completas.
+
+---
+
 ## Cheques — corrección del selector de Cliente
 
 Ver decisión `0040` (sección "Corrección").

@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase/client'
+import { useAuth } from '@/app/providers/AuthProvider'
 import { hoyISO } from '@/core/lib/format'
-import type { Cheque, ChequeFormValues } from './types'
+import type { Cheque, ChequeFormValues, EstadoCheque } from './types'
+import type { Movimiento, TipoMovimiento } from '@/modules/pagos/types'
 
 async function idMedioPagoCheque(): Promise<string> {
   const { data } = await supabase.from('medios_pago').select('id').eq('nombre', 'Cheque').is('archived_at', null).maybeSingle()
@@ -10,10 +12,10 @@ async function idMedioPagoCheque(): Promise<string> {
 }
 
 /** Anula un movimiento (cobro o pago) — mismo patrón que ya usa Facturación al anular una factura vinculada a una deuda. */
-async function anularMovimiento(movimientoId: string, motivo: string) {
+async function anularMovimiento(movimientoId: string, motivo: string, usuarioId: string | undefined) {
   await supabase
     .from('movimientos')
-    .update({ archived_at: new Date().toISOString(), motivo_anulacion: motivo })
+    .update({ archived_at: new Date().toISOString(), anulado_por: usuarioId, motivo_anulacion: motivo })
     .eq('id', movimientoId)
     .is('archived_at', null)
 }
@@ -48,7 +50,48 @@ export function useCheque(id: string | undefined) {
   })
 }
 
-/** Cheques disponibles con vencimiento de hoy o dentro de 7 días — para la tarjeta de Pendientes en Inicio, mismo umbral que Contador. */
+/**
+ * Los movimientos (cobro y/o pago) que usaron este cheque a lo largo de
+ * su vida — para mostrar en su Ficha de dónde vino y a quién se entregó,
+ * con trazabilidad completa (pedido explícito).
+ */
+export function useMovimientosDeCheque(chequeId: string) {
+  return useQuery({
+    queryKey: ['movimientos', 'de_cheque', chequeId],
+    enabled: !!chequeId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('movimientos')
+        .select('*, cliente:clientes(nombre_apellido), proveedor:proveedores(nombre)')
+        .eq('cheque_id', chequeId)
+        .order('created_at', { ascending: true })
+      if (error) throw error
+      return data as (Movimiento & { cliente: { nombre_apellido: string } | null; proveedor: { nombre: string } | null })[]
+    }
+  })
+}
+
+/**
+ * Cheques disponibles para elegir como medio de pago — "cartera" (ver
+ * docs/sistemas/cheques-cartera-pagos-compuestos-diseno.md). Para un
+ * cobro, solo los que todavía no se usaron en nada (`en_cartera`). Para
+ * un pago, también los que ya están en nuestras manos por haberlos
+ * recibido de un cliente (`disponible`) — un cheque puede ir derecho de
+ * la cartera a un proveedor, sin pasar por ningún cliente.
+ */
+export function useChequesDisponiblesParaUsar(tipo: TipoMovimiento) {
+  return useQuery({
+    queryKey: ['cheques', 'disponibles', tipo],
+    queryFn: async () => {
+      const estados: EstadoCheque[] = tipo === 'cobro' ? ['en_cartera'] : ['en_cartera', 'disponible']
+      const { data, error } = await supabase.from('cheques').select('*').in('estado', estados).order('fecha_vencimiento')
+      if (error) throw error
+      return data as Cheque[]
+    }
+  })
+}
+
+/** Cheques en cartera o disponibles con vencimiento de hoy o dentro de 7 días — un cheque sin usar también "vence" si no se lo usa a tiempo. */
 export function useChequesPendientesVencer() {
   return useQuery({
     queryKey: ['cheques', 'pendientes'],
@@ -58,44 +101,25 @@ export function useChequesPendientesVencer() {
       const offset = en7dias.getTimezoneOffset()
       const limite = new Date(en7dias.getTime() - offset * 60_000).toISOString().slice(0, 10)
 
-      const { data, error } = await supabase.from('cheques').select('id').eq('estado', 'disponible').lte('fecha_vencimiento', limite)
+      const { data, error } = await supabase
+        .from('cheques')
+        .select('id')
+        .in('estado', ['en_cartera', 'disponible'])
+        .lte('fecha_vencimiento', limite)
       if (error) throw error
       return data as { id: string }[]
     }
   })
 }
 
-/**
- * Alta de un cheque — recibirlo de un cliente es, en los hechos, un
- * cobro (Motor de Pagos, medio de pago "Cheque") — se crea primero, y el
- * cheque queda vinculado a él (`movimiento_cobro_id`). Ver
- * docs/sistemas/cheques-diseno.md, decisión central aprobada.
- */
+/** Alta de un cheque — entra a la cartera solo, sin cliente ni cobro todavía (decisión aprobada). */
 export function useCrearCheque() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (valores: ChequeFormValues) => {
-      const chequeId = crypto.randomUUID()
-      const medioPagoId = await idMedioPagoCheque()
-
-      const { data: movimiento, error: errorMovimiento } = await supabase
-        .from('movimientos')
-        .insert({
-          tipo: 'cobro',
-          cliente_id: valores.cliente_id,
-          monto: valores.importe as number,
-          fecha: valores.fecha_emision,
-          medio_pago_id: medioPagoId,
-          nota: `Cheque ${valores.numero} — ${valores.banco}`
-        })
-        .select()
-        .single()
-      if (errorMovimiento) throw errorMovimiento
-
-      const { data: cheque, error: errorCheque } = await supabase
+      const { data, error } = await supabase
         .from('cheques')
         .insert({
-          id: chequeId,
           banco: valores.banco.trim(),
           numero: valores.numero.trim(),
           importe: valores.importe as number,
@@ -103,25 +127,18 @@ export function useCrearCheque() {
           cuit: valores.cuit.trim() === '' ? null : valores.cuit.trim(),
           fecha_emision: valores.fecha_emision,
           fecha_vencimiento: valores.fecha_vencimiento,
-          observaciones: valores.observaciones.trim() === '' ? null : valores.observaciones.trim(),
-          cliente_id: valores.cliente_id,
-          movimiento_cobro_id: movimiento.id
+          observaciones: valores.observaciones.trim() === '' ? null : valores.observaciones.trim()
         })
         .select()
         .single()
-      if (errorCheque) throw errorCheque
-
-      return cheque as Cheque
+      if (error) throw error
+      return data as Cheque
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cheques'] })
-      queryClient.invalidateQueries({ queryKey: ['movimientos'] })
-      queryClient.invalidateQueries({ queryKey: ['saldos_clientes'] })
-    }
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cheques'] })
   })
 }
 
-/** Cargarle la foto del frente después de creado — mismo patrón "adjunto opcional, se puede sumar después" del resto del sistema. */
+/** Cargarle la foto del frente, en cualquier momento de su vida — mismo patrón "adjunto opcional" del resto del sistema. */
 export function useAdjuntarComprobanteCheque() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -136,7 +153,7 @@ export function useAdjuntarComprobanteCheque() {
   })
 }
 
-/** Depositar — no genera ningún cobro nuevo (decisión aprobada explícita): el ingreso ya se registró al recibir el cheque. Solo cambia el estado. */
+/** Depositar — no genera ningún cobro nuevo: el ingreso ya se registró cuando se usó el cheque en un cobro. Solo cambia el estado. */
 export function useDepositarCheque() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -166,11 +183,10 @@ export function useMarcarAcreditado() {
 }
 
 /**
- * Entregar a un proveedor — genera un pago normal en el Motor de Pagos
- * (mismo criterio que recibirlo genera un cobro). El cheque queda
- * vinculado a ese pago (`movimiento_pago_id`) para poder ver, desde su
- * Ficha, a quién se entregó y con qué pago exactamente (pedido
- * explícito de trazabilidad).
+ * Entregar a un proveedor — acción rápida desde la Ficha del cheque
+ * (equivalente a elegir este mismo cheque en un pago compuesto desde
+ * Proveedores, para el caso simple de un solo cheque). Genera el pago
+ * en el Motor de Pagos, con `cheque_id` vinculado.
  */
 export function useEntregarAProveedor(chequeId: string) {
   const queryClient = useQueryClient()
@@ -178,23 +194,20 @@ export function useEntregarAProveedor(chequeId: string) {
     mutationFn: async ({ proveedorId, importe, numero, banco }: { proveedorId: string; importe: number; numero: string; banco: string }) => {
       const medioPagoId = await idMedioPagoCheque()
 
-      const { data: movimiento, error: errorMovimiento } = await supabase
-        .from('movimientos')
-        .insert({
-          tipo: 'pago',
-          proveedor_id: proveedorId,
-          monto: importe,
-          fecha: hoyISO(),
-          medio_pago_id: medioPagoId,
-          nota: `Cheque ${numero} — ${banco}`
-        })
-        .select()
-        .single()
+      const { error: errorMovimiento } = await supabase.from('movimientos').insert({
+        tipo: 'pago',
+        proveedor_id: proveedorId,
+        monto: importe,
+        fecha: hoyISO(),
+        medio_pago_id: medioPagoId,
+        cheque_id: chequeId,
+        nota: `Cheque ${numero} — ${banco}`
+      })
       if (errorMovimiento) throw errorMovimiento
 
       const { error: errorCheque } = await supabase
         .from('cheques')
-        .update({ estado: 'entregado', proveedor_id: proveedorId, movimiento_pago_id: movimiento.id })
+        .update({ estado: 'entregado', proveedor_id: proveedorId })
         .eq('id', chequeId)
       if (errorCheque) throw errorCheque
     },
@@ -210,19 +223,30 @@ export function useEntregarAProveedor(chequeId: string) {
 /**
  * Marcar rechazado — desde "Depositado" (nuestro banco lo rechazó: el
  * cobro original se anula, la deuda del cliente vuelve) o desde
- * "Entregado" (el proveedor avisa que rebotó: el pago se anula, decisión
- * aprobada explícita). Mismo criterio en los dos sentidos: se anula el
- * movimiento que había asumido que este cheque era plata real.
+ * "Entregado" (el proveedor avisa que rebotó: el pago se anula). Busca
+ * el movimiento activo correspondiente por `cheque_id` — ya no hay
+ * punteros guardados en el propio cheque.
  */
 export function useMarcarRechazado() {
   const queryClient = useQueryClient()
+  const { usuario } = useAuth()
   return useMutation({
     mutationFn: async (cheque: Cheque) => {
-      if (cheque.estado === 'depositado') {
-        await anularMovimiento(cheque.movimiento_cobro_id, 'Cheque rechazado por el banco.')
-      } else if (cheque.estado === 'entregado' && cheque.movimiento_pago_id) {
-        await anularMovimiento(cheque.movimiento_pago_id, 'Cheque rechazado — el pago al proveedor se anula.')
+      const tipoABuscar = cheque.estado === 'depositado' ? 'cobro' : 'pago'
+      const { data: movimiento } = await supabase
+        .from('movimientos')
+        .select('id')
+        .eq('cheque_id', cheque.id)
+        .eq('tipo', tipoABuscar)
+        .is('archived_at', null)
+        .maybeSingle()
+
+      if (movimiento) {
+        const motivo =
+          tipoABuscar === 'cobro' ? 'Cheque rechazado por el banco.' : 'Cheque rechazado — el pago al proveedor se anula.'
+        await anularMovimiento(movimiento.id, motivo, usuario?.id)
       }
+
       const { error } = await supabase.from('cheques').update({ estado: 'rechazado' }).eq('id', cheque.id)
       if (error) throw error
     },
@@ -236,15 +260,22 @@ export function useMarcarRechazado() {
   })
 }
 
-/** Anular — corrección de un error de carga. Anula siempre el cobro original, y el pago al proveedor también si ya se había entregado. */
+/** Anular — corrección de un error de carga. Anula cualquier cobro y/o pago activo que haya usado este cheque. */
 export function useAnularCheque() {
   const queryClient = useQueryClient()
+  const { usuario } = useAuth()
   return useMutation({
     mutationFn: async (cheque: Cheque) => {
-      await anularMovimiento(cheque.movimiento_cobro_id, 'Cheque anulado.')
-      if (cheque.movimiento_pago_id) {
-        await anularMovimiento(cheque.movimiento_pago_id, 'Cheque anulado.')
+      const { data: movimientos } = await supabase
+        .from('movimientos')
+        .select('id')
+        .eq('cheque_id', cheque.id)
+        .is('archived_at', null)
+
+      for (const m of movimientos ?? []) {
+        await anularMovimiento(m.id, 'Cheque anulado.', usuario?.id)
       }
+
       const { error } = await supabase.from('cheques').update({ estado: 'anulado' }).eq('id', cheque.id)
       if (error) throw error
     },

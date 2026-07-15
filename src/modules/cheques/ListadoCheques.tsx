@@ -13,6 +13,7 @@ import type { Cheque } from './types'
 type ChequeConEntidad = Cheque & { cliente: { nombre_apellido: string } | null; proveedor: { nombre: string } | null }
 
 const PESTANAS: { key: EstadoCheque | 'todos'; etiqueta: string }[] = [
+  { key: 'en_cartera', etiqueta: 'En cartera' },
   { key: 'disponible', etiqueta: 'Disponibles' },
   { key: 'entregado', etiqueta: 'Entregados' },
   { key: 'depositado', etiqueta: 'Depositados' },
@@ -52,7 +53,7 @@ function FilaChequeMovil({ cheque, onClick }: { cheque: ChequeConEntidad; onClic
 export function ListadoCheques() {
   const navigate = useNavigate()
   const { data: cheques, isLoading, isError, refetch } = useCheques()
-  const [pestana, setPestana] = React.useState<EstadoCheque | 'todos'>('disponible')
+  const [pestana, setPestana] = React.useState<EstadoCheque | 'todos'>('en_cartera')
 
   const items = React.useMemo(() => {
     if (!cheques) return []

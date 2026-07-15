@@ -401,13 +401,11 @@ export interface Database {
           cuit: string | null
           fecha_emision: string
           fecha_vencimiento: string
-          estado: 'disponible' | 'entregado' | 'depositado' | 'acreditado' | 'rechazado' | 'anulado'
+          estado: 'en_cartera' | 'disponible' | 'entregado' | 'depositado' | 'acreditado' | 'rechazado' | 'anulado'
           observaciones: string | null
           comprobante_path: string | null
-          cliente_id: string
+          cliente_id: string | null
           proveedor_id: string | null
-          movimiento_cobro_id: string
-          movimiento_pago_id: string | null
           created_at: Timestamp
           updated_at: Timestamp
         }
@@ -418,8 +416,6 @@ export interface Database {
           titular: string
           fecha_emision: string
           fecha_vencimiento: string
-          cliente_id: string
-          movimiento_cobro_id: string
         }
         Update: Partial<Database['public']['Tables']['cheques']['Row']>
         Relationships: [
@@ -433,18 +429,6 @@ export interface Database {
             foreignKeyName: 'cheques_proveedor_id_fkey'
             columns: ['proveedor_id']
             referencedRelation: 'proveedores'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'cheques_movimiento_cobro_id_fkey'
-            columns: ['movimiento_cobro_id']
-            referencedRelation: 'movimientos'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'cheques_movimiento_pago_id_fkey'
-            columns: ['movimiento_pago_id']
-            referencedRelation: 'movimientos'
             referencedColumns: ['id']
           }
         ]
@@ -466,6 +450,7 @@ export interface Database {
           fecha: string
           medio_pago_id: string
           cheque_id: string | null
+          grupo_id: string | null
           comprobante_path: string | null
           nota: string | null
           archived_at: Timestamp | null
@@ -503,6 +488,12 @@ export interface Database {
             foreignKeyName: 'movimientos_anulado_por_fkey'
             columns: ['anulado_por']
             referencedRelation: 'usuarios'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'movimientos_cheque_id_fkey'
+            columns: ['cheque_id']
+            referencedRelation: 'cheques'
             referencedColumns: ['id']
           }
         ]
@@ -675,6 +666,7 @@ export interface Database {
           monto: number
           motivo: string
           fecha: string
+          transferencia_id: string | null
           archived_at: Timestamp | null
           anulado_por: string | null
           motivo_anulacion: string | null
@@ -701,6 +693,54 @@ export interface Database {
           },
           {
             foreignKeyName: 'ajustes_cuenta_anulado_por_fkey'
+            columns: ['anulado_por']
+            referencedRelation: 'usuarios'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'ajustes_cuenta_transferencia_id_fkey'
+            columns: ['transferencia_id']
+            referencedRelation: 'transferencias_cuenta'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      transferencias_cuenta: {
+        Row: {
+          id: string
+          numero_interno: number
+          origen_cliente_id: string
+          destino_cliente_id: string
+          importe: number
+          fecha: string
+          motivo: string | null
+          archived_at: Timestamp | null
+          anulado_por: string | null
+          motivo_anulacion: string | null
+          created_at: Timestamp
+          updated_at: Timestamp
+        }
+        Insert: Partial<Database['public']['Tables']['transferencias_cuenta']['Row']> & {
+          origen_cliente_id: string
+          destino_cliente_id: string
+          importe: number
+        }
+        Update: Partial<Database['public']['Tables']['transferencias_cuenta']['Row']>
+        Relationships: [
+          {
+            foreignKeyName: 'transferencias_cuenta_origen_cliente_id_fkey'
+            columns: ['origen_cliente_id']
+            referencedRelation: 'clientes'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'transferencias_cuenta_destino_cliente_id_fkey'
+            columns: ['destino_cliente_id']
+            referencedRelation: 'clientes'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'transferencias_cuenta_anulado_por_fkey'
             columns: ['anulado_por']
             referencedRelation: 'usuarios'
             referencedColumns: ['id']

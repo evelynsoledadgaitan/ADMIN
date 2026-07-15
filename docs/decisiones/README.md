@@ -42,3 +42,4 @@ Cada archivo de esta carpeta documenta **una** decisión de arquitectura: qué s
 38. [0038 — Informes: períodos, ordenamiento, filtros, resumen](./0038-informes-mejoras.md)
 39. [0039 — Facturación: IVA por línea de artículo](./0039-iva-por-linea.md)
 40. [0040 — Módulo Cheques (completo)](./0040-cheques.md)
+41. [0041 — Cheques como cartera + pagos/cobros compuestos + Transferencia entre cuentas](./0041-cheques-cartera-pagos-compuestos.md)

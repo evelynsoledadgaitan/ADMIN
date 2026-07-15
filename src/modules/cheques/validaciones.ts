@@ -10,7 +10,6 @@ export function validarCheque(valores: ChequeFormValues): ErroresCheque {
   if (!valores.numero.trim()) errores.numero = 'Este dato es obligatorio.'
   if (!valores.titular.trim()) errores.titular = 'Este dato es obligatorio.'
   if (valores.importe === null || valores.importe <= 0) errores.importe = 'Ingresá un importe mayor a cero.'
-  if (!valores.cliente_id) errores.cliente_id = 'Elegí de quién se recibe el cheque.'
   if (!valores.fecha_emision) errores.fecha_emision = 'Este dato es obligatorio.'
   else if (valores.fecha_emision > hoyISO()) errores.fecha_emision = 'La fecha de emisión no puede ser futura.'
   if (!valores.fecha_vencimiento) errores.fecha_vencimiento = 'Este dato es obligatorio.'
